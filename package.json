@@ -15,7 +15,8 @@
     "build": "bun run --filter '*' build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "ci:test": "bun run lint && bun run fmt:check && bun run typecheck && bun run test:coverage && bun run build"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^3.0.0",

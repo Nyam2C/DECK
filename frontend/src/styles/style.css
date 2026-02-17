@@ -1,0 +1,177 @@
+@import "tailwindcss";
+
+/* ═══════════════════════ DECK 디자인 토큰 ═══════════════════════ */
+@theme {
+  --color-deck-bg: #0a0a14;
+  --color-deck-panel: #12121f;
+  --color-deck-border: #1e1e32;
+  --color-deck-cyan: #39c5bb;
+  --color-deck-pink: #ffb7c5;
+  --color-deck-gold: #ffd700;
+  --color-deck-text: #e0e0e8;
+  --color-deck-dim: #6b6b80;
+}
+
+/* ═══════════════════════ 애니메이션 ═══════════════════════ */
+@keyframes blink-cursor {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes glow-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px var(--color-deck-cyan),
+      0 0 16px color-mix(in srgb, var(--color-deck-cyan) 40%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 12px var(--color-deck-cyan),
+      0 0 24px color-mix(in srgb, var(--color-deck-cyan) 60%, transparent);
+  }
+}
+@keyframes glow-pulse-gold {
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px var(--color-deck-gold),
+      0 0 16px color-mix(in srgb, var(--color-deck-gold) 40%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 12px var(--color-deck-gold),
+      0 0 24px color-mix(in srgb, var(--color-deck-gold) 60%, transparent);
+  }
+}
+@keyframes badge-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.15);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes sparkle {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* ═══════════════════════ 커스텀 유틸리티 ═══════════════════════ */
+@utility font-dot {
+  font-family: "DungGeunMo", "Courier New", monospace;
+}
+@utility font-term {
+  font-family: "SF Mono", "Cascadia Code", "Fira Code", "Consolas", monospace;
+}
+
+@utility glow-cyan {
+  box-shadow:
+    0 0 8px var(--color-deck-cyan),
+    0 0 16px color-mix(in srgb, var(--color-deck-cyan) 40%, transparent);
+}
+@utility glow-gold {
+  box-shadow:
+    0 0 8px var(--color-deck-gold),
+    0 0 16px color-mix(in srgb, var(--color-deck-gold) 40%, transparent);
+}
+
+@utility animate-blink {
+  animation: blink-cursor 1s step-end infinite;
+}
+@utility animate-glow {
+  animation: glow-pulse 2.5s ease-in-out infinite;
+}
+@utility animate-glow-gold {
+  animation: glow-pulse-gold 2.5s ease-in-out infinite;
+}
+@utility animate-badge {
+  animation: badge-pulse 1.5s ease-in-out infinite;
+}
+@utility animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+@utility animate-sparkle {
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+@utility dot-grid-bg {
+  background-image: radial-gradient(circle, #1e1e32 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* ═══════════════════════ 커스텀 CSS ═══════════════════════ */
+.miku-sprite {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  pointer-events: none;
+  user-select: none;
+}
+
+.scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 3px,
+    rgba(0, 0, 0, 0.06) 3px,
+    rgba(0, 0, 0, 0.06) 4px
+  );
+}
+
+.pixel-border {
+  border: 2px solid #39c5bb;
+  box-shadow:
+    inset 0 0 0 2px #12121f,
+    inset 0 0 0 4px #39c5bb33,
+    0 0 24px #39c5bb22,
+    0 0 48px #39c5bb11;
+}
+
+/* ═══════════════════════ 스크롤바 ═══════════════════════ */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #12121f;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e1e32;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #39c5bb;
+}
+::selection {
+  background: #39c5bb33;
+  color: #e0e0e8;
+}
