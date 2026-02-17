@@ -17,7 +17,7 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
   const [path, setPath] = useState("");
   const [sessionMode, setSessionMode] = useState<SessionMode>("new");
   const [permissionMode, setPermissionMode] = useState<PermissionMode>("plan");
-  const [skipPermissions, _setSkipPermissions] = useState(false);
+  const [skipPermissions, setSkipPermissions] = useState(false);
   const [model, setModel] = useState<ModelType>("sonnet");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [customCommand, setCustomCommand] = useState("");
@@ -142,6 +142,15 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
               </select>
               <span className="text-deck-dim">(plan / safe / turbo)</span>
             </div>
+            <label
+              className={`pl-2 mt-1 flex items-center gap-2 cursor-pointer transition-colors ${
+                skipPermissions ? "text-deck-gold" : "text-deck-dim hover:text-deck-gold"
+              }`}
+              onClick={() => setSkipPermissions(!skipPermissions)}
+            >
+              <span>{skipPermissions ? "◆" : "◇"}</span>
+              --dangerously-skip-permissions
+            </label>
           </div>
 
           {/* 모델 */}

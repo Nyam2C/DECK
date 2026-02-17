@@ -39,17 +39,52 @@ describe("getGridClassName", () => {
 });
 
 describe("getPanelSpanClassName", () => {
-  it("3개 패널의 마지막(index 2)에 col-span-2", () => {
-    expect(getPanelSpanClassName(2, 3, false, false)).toBe("col-span-2");
+  it("3개 패널의 마지막(index 2)에 오른쪽 전체 높이", () => {
+    const cls = getPanelSpanClassName(2, 3, false, false);
+    expect(cls).toContain("row-span-2");
+    expect(cls).toContain("col-start-2");
   });
 
-  it("3개 패널의 처음(index 0)에 빈 문자열", () => {
-    expect(getPanelSpanClassName(0, 3, false, false)).toBe("");
+  it("3개 패널의 처음(index 0)에 왼쪽 위 배치", () => {
+    const cls = getPanelSpanClassName(0, 3, false, false);
+    expect(cls).toContain("col-start-1");
+    expect(cls).toContain("row-start-1");
   });
 
-  it("4개 패널에서는 col-span-2 없음", () => {
+  it("3개 패널의 두번째(index 1)에 왼쪽 아래 배치", () => {
+    const cls = getPanelSpanClassName(1, 3, false, false);
+    expect(cls).toContain("col-start-1");
+    expect(cls).toContain("row-start-2");
+  });
+
+  it("4개 패널에서는 배치 클래스 없음", () => {
     for (let i = 0; i < 4; i++) {
       expect(getPanelSpanClassName(i, 4, false, false)).toBe("");
     }
+  });
+
+  // 핀 레이아웃
+  it("핀 모드: 핀 패널은 왼쪽 전체 높이 (3개)", () => {
+    const cls = getPanelSpanClassName(0, 3, true, true);
+    expect(cls).toContain("col-start-1");
+    expect(cls).toContain("row-span-2");
+  });
+
+  it("핀 모드: 핀 패널은 왼쪽 전체 높이 (4개)", () => {
+    const cls = getPanelSpanClassName(0, 4, true, true);
+    expect(cls).toContain("col-start-1");
+    expect(cls).toContain("row-span-3");
+  });
+
+  it("핀 모드: 나머지 패널은 오른쪽 각 행", () => {
+    // 3개 중 핀 1개: 나머지 2개 (index 1, 2)
+    expect(getPanelSpanClassName(1, 3, true, false)).toContain("col-start-2 row-start-1");
+    expect(getPanelSpanClassName(2, 3, true, false)).toContain("col-start-2 row-start-2");
+  });
+
+  it("핀 모드: 4개 중 나머지 3개 배치", () => {
+    expect(getPanelSpanClassName(1, 4, true, false)).toContain("col-start-2 row-start-1");
+    expect(getPanelSpanClassName(2, 4, true, false)).toContain("col-start-2 row-start-2");
+    expect(getPanelSpanClassName(3, 4, true, false)).toContain("col-start-2 row-start-3");
   });
 });

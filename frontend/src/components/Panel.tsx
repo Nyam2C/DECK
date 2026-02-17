@@ -73,10 +73,16 @@ export function Panel({ panel, spanClassName }: PanelProps) {
       onClick={() => setFocus(panel.id)}
     >
       {/* 패널 헤더 */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-dotted border-deck-border bg-deck-bg/50">
+      <div
+        className={`flex items-center justify-between px-3 py-2 border-b border-dotted border-deck-border ${
+          isPinned ? "bg-deck-cyan/10" : "bg-deck-bg/50"
+        }`}
+      >
         <div className="flex items-center gap-2 min-w-0">
           <span className={`${statusIcon.color} text-xs`}>{statusIcon.icon}</span>
           <span className="text-deck-text text-sm truncate">{panel.name}</span>
+
+          {isPinned && <span className="text-deck-cyan text-[10px] tracking-wider">[ PIN ]</span>}
 
           {panel.status !== "setup" && (
             <>
@@ -114,10 +120,14 @@ export function Panel({ panel, spanClassName }: PanelProps) {
               e.stopPropagation();
               handlePinToggle();
             }}
-            className={`text-xs transition-colors ${isPinned ? "text-deck-cyan" : "text-deck-dim hover:text-deck-cyan"}`}
-            title="핀"
+            className={`text-[10px] px-1.5 py-0.5 border transition-all ${
+              isPinned
+                ? "bg-deck-cyan text-deck-bg font-bold border-deck-cyan shadow-[0_0_12px_#39C5BB]"
+                : "text-deck-dim border-dashed border-deck-border hover:text-deck-cyan hover:border-deck-cyan/50"
+            }`}
+            title={isPinned ? "핀 해제" : "핀 고정"}
           >
-            📌
+            PIN
           </button>
 
           {/* 닫기 버튼 */}

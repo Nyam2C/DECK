@@ -5,13 +5,14 @@ import { Panel } from "./Panel";
  * 패널 수에 따른 Grid 클래스 규칙:
  * 1개: grid-cols-1 grid-rows-1
  * 2개: grid-cols-2 grid-rows-1
- * 3개: grid-cols-2 grid-rows-2 (마지막 패널 col-span-2)
+ * 3개: grid-cols-2 grid-rows-2 (왼쪽 2개 + 오른쪽 1개)
  * 4개: grid-cols-2 grid-rows-2
  *
- * 핀 상태일 때:
+ * 핀 상태일 때 (Google Meet 스타일):
+ * 핀된 패널이 왼쪽 70%, 나머지가 오른쪽 30%에 세로 나열
  * 2개: grid-cols-[7fr_3fr] grid-rows-1
- * 3개: grid-cols-[7fr_3fr] grid-rows-2 (좌측 패널 row-span-2)
- * 4개: grid-cols-[7fr_3fr] grid-rows-3 (좌측 패널 row-span-3)
+ * 3개: grid-cols-[7fr_3fr] grid-rows-2
+ * 4개: grid-cols-[7fr_3fr] grid-rows-3
  */
 export function getGridClassName(panelCount: number, hasPinned: boolean): string {
   const base = "flex-1 grid gap-3 p-3 min-h-0 min-w-[800px]";
@@ -43,25 +44,38 @@ export function getGridClassName(panelCount: number, hasPinned: boolean): string
   }
 }
 
-/**
- * 3개 패널에서 마지막 패널의 col-span-2 클래스를 반환한다.
- * 핀 상태에서는 적용하지 않는다.
- */
+/** 개별 패널의 grid 배치 클래스를 반환한다. */
 export function getPanelSpanClassName(
   index: number,
   panelCount: number,
   hasPinned: boolean,
   isPinned: boolean,
 ): string {
-  // 핀된 패널: row-span 적용
-  if (hasPinned && isPinned) {
-    const otherCount = panelCount - 1;
-    if (otherCount >= 1) return `row-span-${otherCount}`;
+  // 핀 모드: 핀 패널은 왼쪽 전체 높이, 나머지는 오른쪽 각 행
+  // Tailwind JIT는 동적 클래스를 감지 못하므로 전체 문자열 사용
+  if (hasPinned) {
+    if (isPinned) {
+      const pinnedClasses: Record<number, string> = {
+        2: "col-start-1 row-start-1",
+        3: "col-start-1 row-start-1 row-span-2",
+        4: "col-start-1 row-start-1 row-span-3",
+      };
+      return pinnedClasses[panelCount] ?? "col-start-1 row-start-1";
+    }
+    const rowClasses = [
+      "",
+      "col-start-2 row-start-1",
+      "col-start-2 row-start-2",
+      "col-start-2 row-start-3",
+    ];
+    return rowClasses[index] ?? "";
   }
 
-  // 일반 모드: 3개일 때 마지막 패널 col-span-2
-  if (!hasPinned && panelCount === 3 && index === 2) {
-    return "col-span-2";
+  // 일반 모드: 3개일 때 왼쪽 2개 + 오른쪽 1개 (명시적 배치)
+  if (panelCount === 3) {
+    if (index === 0) return "col-start-1 row-start-1";
+    if (index === 1) return "col-start-1 row-start-2";
+    if (index === 2) return "col-start-2 row-start-1 row-span-2";
   }
 
   return "";
