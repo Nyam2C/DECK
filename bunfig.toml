@@ -1,0 +1,5 @@
+[install]
+peer = false
+
+[install.scopes]
+# 필요 시 레지스트리 오버라이드
