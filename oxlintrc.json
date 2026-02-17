@@ -1,0 +1,11 @@
+{
+  "rules": {
+    "no-unused-vars": "warn",
+    "no-console": "off",
+    "eqeqeq": "error",
+    "no-var": "error",
+    "prefer-const": "warn",
+    "no-explicit-any": "warn"
+  },
+  "ignorePatterns": ["node_modules", "dist", "coverage"]
+}
