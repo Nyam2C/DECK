@@ -34,6 +34,7 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
   // 디렉토리 자동완성
   const [candidates, setCandidates] = useState<string[]>([]);
   const [showCandidates, setShowCandidates] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pathInputRef = useRef<HTMLInputElement>(null);
 
@@ -69,6 +70,7 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
       if (msg.type === "autocomplete-result" && msg.panelId === panelId) {
         setCandidates(msg.candidates);
         setShowCandidates(msg.candidates.length > 0);
+        setSelectedIndex(-1);
       }
     });
   }, [panelId]);
@@ -90,6 +92,33 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
     },
     [],
   );
+
+  // 자동완성 후보 선택
+  function selectCandidate(value: string) {
+    setPath(value);
+    setShowCandidates(false);
+    setCandidates([]);
+    setSelectedIndex(-1);
+  }
+
+  // 경로 입력 키보드 핸들러
+  function handlePathKeyDown(e: React.KeyboardEvent) {
+    if (!showCandidates || candidates.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev < candidates.length - 1 ? prev + 1 : 0));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : candidates.length - 1));
+    } else if (e.key === "Enter" && selectedIndex >= 0) {
+      e.preventDefault();
+      selectCandidate(candidates[selectedIndex]);
+    } else if (e.key === "Escape") {
+      setShowCandidates(false);
+      setSelectedIndex(-1);
+    }
+  }
 
   // 명령어 미리보기 조합
   function previewCommand(): string {
@@ -268,21 +297,24 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
           type="text"
           value={path}
           onChange={(e) => handlePathChange(e.target.value)}
+          onKeyDown={handlePathKeyDown}
           onBlur={() => setTimeout(() => setShowCandidates(false), 150)}
           placeholder="~/project"
           className="w-full bg-deck-bg border border-dashed border-deck-border px-2 py-1.5 text-deck-text font-term text-xs focus:border-deck-cyan/50 outline-none"
         />
         {showCandidates && candidates.length > 0 && (
           <div className="absolute z-10 left-0 right-0 mt-0.5 bg-deck-bg border border-deck-border max-h-32 overflow-y-auto">
-            {candidates.map((c) => (
+            {candidates.map((c, i) => (
               <button
                 key={c}
-                className="block w-full text-left px-2 py-1 text-deck-text hover:bg-deck-cyan/15 hover:text-deck-cyan text-xs font-term"
+                className={`block w-full text-left px-2 py-1 text-xs font-term ${
+                  i === selectedIndex
+                    ? "bg-deck-cyan/15 text-deck-cyan"
+                    : "text-deck-text hover:bg-deck-cyan/15 hover:text-deck-cyan"
+                }`}
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  setPath(c);
-                  setShowCandidates(false);
-                  setCandidates([]);
+                  selectCandidate(c);
                 }}
               >
                 {c}
