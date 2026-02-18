@@ -156,7 +156,7 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
       return;
     }
 
-    const trimmedPath = path.trim();
+    const trimmedPath = path.trim().replace(/\/+$/, "");
     const name = trimmedPath.split("/").pop() || "새 패널";
     const cli =
       cliKey === "claude" ? "claude" : (formState.command as string).split(/\s+/)[0] || "";

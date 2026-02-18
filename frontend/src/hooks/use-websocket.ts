@@ -7,7 +7,8 @@ export type ClientMessage =
   | { type: "input"; panelId: string; data: string }
   | { type: "resize"; panelId: string; cols: number; rows: number }
   | { type: "kill"; panelId: string }
-  | { type: "autocomplete"; panelId: string; partial: string };
+  | { type: "autocomplete"; panelId: string; partial: string }
+  | { type: "register-hook"; panelId: string };
 
 export type PanelState = "active" | "idle" | "input";
 

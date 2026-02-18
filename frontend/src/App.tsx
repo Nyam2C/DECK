@@ -21,12 +21,35 @@ export function App() {
 
   // 서버 메시지 라우팅
   useEffect(() => {
+    // 상태 진입 시각 기록 — 잔여 출력과 실제 응답을 구분하기 위한 디바운스
+    const inputEnteredAt = new Map<string, number>();
+    const idleEnteredAt = new Map<string, number>();
+    const INPUT_GRACE_MS = 2000;
+    const IDLE_GRACE_MS = 3000;
+
     return onServerMessage((msg) => {
       const { updatePanel, setStatus } = usePanelStore.getState();
 
       switch (msg.type) {
+        case "output": {
+          const panel = usePanelStore.getState().panels.find((p) => p.id === msg.panelId);
+          if (panel?.status === "idle") {
+            const idleAt = idleEnteredAt.get(msg.panelId);
+            if (idleAt === undefined || Date.now() - idleAt > IDLE_GRACE_MS) {
+              setStatus(msg.panelId, "active");
+              idleEnteredAt.delete(msg.panelId);
+            }
+          }
+          const enteredAt = inputEnteredAt.get(msg.panelId);
+          if (enteredAt !== undefined && Date.now() - enteredAt > INPUT_GRACE_MS) {
+            setStatus(msg.panelId, "active");
+            inputEnteredAt.delete(msg.panelId);
+          }
+          break;
+        }
         case "exited":
           updatePanel(msg.panelId, { status: "exited", exitCode: msg.exitCode });
+          inputEnteredAt.delete(msg.panelId);
           break;
         case "status":
           setStatus(msg.panelId, msg.state);
@@ -35,7 +58,13 @@ export function App() {
           updatePanel(msg.panelId, { hookConnected: msg.connected });
           break;
         case "hook-notify":
-          setStatus(msg.panelId, "input");
+          if (msg.message === "stop") {
+            setStatus(msg.panelId, "idle");
+            idleEnteredAt.set(msg.panelId, Date.now());
+          } else {
+            setStatus(msg.panelId, "input");
+            inputEnteredAt.set(msg.panelId, Date.now());
+          }
           break;
         case "error":
           // PanelSetup에서 개별 처리하므로 panelId 없는 글로벌 에러만 로깅
@@ -63,13 +92,31 @@ export function App() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
+  // 서버 연결 끊김 → 모든 running 패널 exited 전환
+  useEffect(() => {
+    return useWsState.subscribe((state, prev) => {
+      if (prev.wasConnected && state.connectionState === "disconnected") {
+        const { panels, updatePanel } = usePanelStore.getState();
+        for (const p of panels) {
+          if (p.status === "active" || p.status === "idle" || p.status === "input") {
+            updatePanel(p.id, { status: "exited", exitCode: -1 });
+          }
+        }
+      }
+    });
+  }, []);
+
   // 탭 타이틀 동적 업데이트
   useEffect(() => {
     return usePanelStore.subscribe((state) => {
-      const count = state.panels.filter(
-        (p) => p.status === "active" || p.status === "idle" || p.status === "input",
+      const active = state.panels.filter(
+        (p) => p.status === "active" || p.status === "idle",
       ).length;
-      document.title = count > 0 ? `DECK (${count})` : "DECK";
+      const waiting = state.panels.filter((p) => p.status === "input").length;
+      const parts: string[] = [];
+      if (active > 0) parts.push(`${active} active`);
+      if (waiting > 0) parts.push(`${waiting} waiting`);
+      document.title = parts.length > 0 ? `DECK — ${parts.join(", ")}` : "DECK";
     });
   }, []);
 

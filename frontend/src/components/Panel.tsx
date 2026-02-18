@@ -12,7 +12,10 @@ interface PanelProps {
 
 /** 상태별 보더/글로우 클래스 */
 function getStatusClasses(status: PanelStatus, isFocused: boolean): string {
-  if (isFocused && (status === "active" || status === "idle")) {
+  if (status === "idle") {
+    return "border-deck-pink animate-glow-pink";
+  }
+  if (isFocused && status === "active") {
     return "border-deck-cyan animate-glow";
   }
   if (status === "input") {
@@ -52,6 +55,24 @@ function TerminalView({ panelId }: { panelId: string }) {
   return <div ref={containerRef} className="w-full h-full pl-2" />;
 }
 
+/** 종료 코드별 설명 메시지 */
+function getExitMessage(exitCode: number | undefined): string {
+  switch (exitCode) {
+    case 0:
+      return "세션이 정상 종료되었습니다";
+    case 130:
+      return "세션이 중단되었습니다";
+    case 137:
+      return "세션이 비정상 종료되었습니다";
+    case 143:
+      return "세션이 종료되었습니다";
+    case -1:
+      return "서버 연결이 끊어졌습니다";
+    default:
+      return "세션이 비정상 종료되었습니다";
+  }
+}
+
 /** 종료 뷰 — 종료 코드 + 재시작/닫기 버튼 */
 function ExitedView({ panel }: { panel: PanelType }) {
   const updatePanel = usePanelStore((s) => s.updatePanel);
@@ -70,7 +91,8 @@ function ExitedView({ panel }: { panel: PanelType }) {
 
   return (
     <div className="flex flex-col items-center justify-center h-full gap-3 p-4">
-      <span className="text-deck-dim text-xs">프로세스 종료 (코드: {panel.exitCode ?? "?"})</span>
+      <span className="text-deck-dim text-xs">{getExitMessage(panel.exitCode)}</span>
+      <span className="text-deck-border text-[10px]">코드: {panel.exitCode ?? "?"}</span>
       <div className="flex gap-2">
         <button
           onClick={handleRestart}
@@ -93,9 +115,18 @@ export function Panel({ panel, spanClassName }: PanelProps) {
   const focusedId = usePanelStore((s) => s.focusedId);
   const setFocus = usePanelStore((s) => s.setFocus);
   const removePanel = usePanelStore((s) => s.removePanel);
+  const updatePanel = usePanelStore((s) => s.updatePanel);
   const pinnedId = usePanelStore((s) => s.pinnedId);
   const setPinned = usePanelStore((s) => s.setPinned);
   const [confirming, setConfirming] = useState(false);
+
+  function handleRegisterHook() {
+    sendMessage({ type: "register-hook", panelId: panel.id });
+  }
+
+  function handleDismissHook() {
+    updatePanel(panel.id, { hookConnected: null });
+  }
 
   const isFocused = focusedId === panel.id;
   const isPinned = pinnedId === panel.id;
@@ -166,7 +197,7 @@ export function Panel({ panel, spanClassName }: PanelProps) {
         >
           <div className="flex items-center gap-2 min-w-0">
             <span className={`${statusIcon.color} text-xs`}>{statusIcon.icon}</span>
-            <span className="text-deck-text text-sm truncate">{panel.name}</span>
+            <span className="text-deck-text text-sm truncate max-w-[20ch]">{panel.name}</span>
 
             {isPinned && <span className="text-deck-cyan text-[10px] tracking-wider">[ PIN ]</span>}
 
@@ -181,25 +212,22 @@ export function Panel({ panel, spanClassName }: PanelProps) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* 입력 대기 뱃지 */}
-            {panel.status === "input" && (
-              <span
-                className="text-deck-gold text-xs animate-badge inline-block"
-                title="입력 대기중"
-              >
-                [ ! ]
-              </span>
-            )}
-
             {/* 훅 상태 표시 */}
             {panel.hookConnected === true && (
-              <span className="text-xs" title="훅 연결됨">
-                🔗
+              <span className="text-deck-cyan text-[10px] tracking-wider" title="훅 연결됨">
+                [ HOOK ]
               </span>
             )}
             {panel.hookConnected === false && (
-              <span className="text-xs cursor-pointer" title="훅 미연결 — 클릭하여 설정">
-                ⚠
+              <span
+                className="text-deck-gold text-[10px] tracking-wider cursor-pointer hover:text-deck-gold/80 transition-colors"
+                title="훅 미연결 — 클릭하여 설정"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRegisterHook();
+                }}
+              >
+                [ HOOK ]
               </span>
             )}
 
@@ -235,13 +263,43 @@ export function Panel({ panel, spanClassName }: PanelProps) {
       )}
 
       {/* 패널 본문 */}
-      <div style={{ flex: "1 1 0%", minHeight: 0, overflowY: "auto" }}>
+      <div style={{ flex: "1 1 0%", minHeight: 0, overflowY: "auto" }} className="relative">
         {panel.status === "setup" ? (
           <PanelSetup panelId={panel.id} />
         ) : panel.status === "exited" ? (
           <ExitedView panel={panel} />
         ) : (
-          <TerminalView panelId={panel.id} />
+          <>
+            {panel.hookConnected === false && (
+              <div className="absolute inset-x-0 top-0 z-10 bg-deck-bg/95 border-b border-dashed border-deck-gold p-3 text-xs space-y-2">
+                <div className="text-deck-gold">▪ 알림 훅 미등록</div>
+                <div className="text-deck-dim">
+                  Claude Code의 입력 대기 알림을 받으려면 훅 등록이 필요합니다
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRegisterHook();
+                    }}
+                    className="px-3 py-1 border border-deck-gold text-deck-gold hover:bg-deck-gold/15 transition-colors"
+                  >
+                    등록
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDismissHook();
+                    }}
+                    className="px-3 py-1 border border-dashed border-deck-border text-deck-dim hover:text-deck-text transition-colors"
+                  >
+                    나중에
+                  </button>
+                </div>
+              </div>
+            )}
+            <TerminalView panelId={panel.id} />
+          </>
         )}
       </div>
     </div>

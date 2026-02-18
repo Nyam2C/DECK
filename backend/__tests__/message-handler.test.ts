@@ -25,6 +25,7 @@ describe("handleMessage", () => {
       JSON.stringify({ type: "create", cli: "claude", path: "/tmp", options: "--model sonnet" }),
       manager,
       send,
+      3000,
     );
 
     expect(manager.create).toHaveBeenCalledWith(
@@ -42,7 +43,12 @@ describe("handleMessage", () => {
     const manager = mockPtyManager();
     const send = vi.fn<(msg: ServerMessage) => void>();
 
-    handleMessage(JSON.stringify({ type: "input", panelId: "abc", data: "hello" }), manager, send);
+    handleMessage(
+      JSON.stringify({ type: "input", panelId: "abc", data: "hello" }),
+      manager,
+      send,
+      3000,
+    );
 
     expect(manager.write).toHaveBeenCalledWith("abc", "hello");
   });
@@ -55,6 +61,7 @@ describe("handleMessage", () => {
       JSON.stringify({ type: "resize", panelId: "abc", cols: 120, rows: 40 }),
       manager,
       send,
+      3000,
     );
 
     expect(manager.resize).toHaveBeenCalledWith("abc", 120, 40);
@@ -64,7 +71,7 @@ describe("handleMessage", () => {
     const manager = mockPtyManager();
     const send = vi.fn<(msg: ServerMessage) => void>();
 
-    handleMessage(JSON.stringify({ type: "kill", panelId: "abc" }), manager, send);
+    handleMessage(JSON.stringify({ type: "kill", panelId: "abc" }), manager, send, 3000);
 
     expect(manager.kill).toHaveBeenCalledWith("abc");
   });
@@ -73,7 +80,7 @@ describe("handleMessage", () => {
     const manager = mockPtyManager();
     const send = vi.fn<(msg: ServerMessage) => void>();
 
-    handleMessage("not json", manager, send);
+    handleMessage("not json", manager, send, 3000);
 
     expect(send).toHaveBeenCalledWith(expect.objectContaining({ type: "error" }));
   });
@@ -90,6 +97,7 @@ describe("handleMessage", () => {
       JSON.stringify({ type: "create", cli: "claude", path: "/tmp", options: "" }),
       manager,
       send,
+      3000,
     );
 
     expect(send).toHaveBeenCalledWith(
@@ -105,7 +113,12 @@ describe("handleMessage", () => {
     });
     const send = vi.fn<(msg: ServerMessage) => void>();
 
-    handleMessage(JSON.stringify({ type: "input", panelId: "abc", data: "hello" }), manager, send);
+    handleMessage(
+      JSON.stringify({ type: "input", panelId: "abc", data: "hello" }),
+      manager,
+      send,
+      3000,
+    );
 
     expect(send).toHaveBeenCalledWith(expect.objectContaining({ type: "error", panelId: "abc" }));
   });
@@ -122,6 +135,7 @@ describe("handleMessage", () => {
       JSON.stringify({ type: "resize", panelId: "abc", cols: 120, rows: 40 }),
       manager,
       send,
+      3000,
     );
 
     expect(send).toHaveBeenCalledWith(expect.objectContaining({ type: "error", panelId: "abc" }));
@@ -131,19 +145,18 @@ describe("handleMessage", () => {
     const manager = mockPtyManager();
     const send = vi.fn<(msg: ServerMessage) => void>();
 
-    handleMessage(JSON.stringify({ type: "autocomplete", partial: "/tmp" }), manager, send);
+    handleMessage(JSON.stringify({ type: "autocomplete", partial: "/tmp" }), manager, send, 3000);
 
     // autocomplete는 비동기이므로 대기
-    await vi.waitFor(() => {
-      expect(send).toHaveBeenCalledWith(expect.objectContaining({ type: "autocomplete-result" }));
-    });
+    await new Promise((r) => setTimeout(r, 200));
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ type: "autocomplete-result" }));
   });
 
   it("알 수 없는 메시지 타입에 에러 응답을 보낸다", () => {
     const manager = mockPtyManager();
     const send = vi.fn<(msg: ServerMessage) => void>();
 
-    handleMessage(JSON.stringify({ type: "unknown" }), manager, send);
+    handleMessage(JSON.stringify({ type: "unknown" }), manager, send, 3000);
 
     expect(send).toHaveBeenCalledWith(
       expect.objectContaining({ type: "error", message: "알 수 없는 메시지 타입" }),
@@ -158,6 +171,7 @@ describe("handleMessage", () => {
       JSON.stringify({ type: "create", cli: "bash", path: "/tmp", options: "" }),
       manager,
       send,
+      3000,
     );
 
     expect(manager.create).toHaveBeenCalledWith("bash", [], "/tmp", 80, 24, undefined);

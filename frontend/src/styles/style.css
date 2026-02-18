@@ -49,6 +49,19 @@
       0 0 24px color-mix(in srgb, var(--color-deck-gold) 60%, transparent);
   }
 }
+@keyframes glow-pulse-pink {
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px var(--color-deck-pink),
+      0 0 16px color-mix(in srgb, var(--color-deck-pink) 40%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 12px var(--color-deck-pink),
+      0 0 24px color-mix(in srgb, var(--color-deck-pink) 60%, transparent);
+  }
+}
 @keyframes badge-pulse {
   0%,
   100% {
@@ -109,6 +122,9 @@
 }
 @utility animate-glow-gold {
   animation: glow-pulse-gold 2.5s ease-in-out infinite;
+}
+@utility animate-glow-pink {
+  animation: glow-pulse-pink 2.5s ease-in-out infinite;
 }
 @utility animate-badge {
   animation: badge-pulse 1.5s ease-in-out infinite;

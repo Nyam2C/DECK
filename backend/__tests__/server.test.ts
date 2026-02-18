@@ -25,6 +25,8 @@ describe("createServer", () => {
 
   afterEach(async () => {
     result.ptyManager.killAll();
+    result.wss.clients.forEach((ws) => ws.terminate());
+    result.server.closeAllConnections();
     await new Promise<void>((resolve) => result.server.close(() => resolve()));
   });
 
@@ -71,6 +73,7 @@ describe("createServer", () => {
     expect(ws2.readyState).toBe(WebSocket.OPEN);
 
     ws2.close();
+    await waitForClose(ws2);
   });
 
   it("POST /hook/notify가 OK 응답을 반환한다", async () => {

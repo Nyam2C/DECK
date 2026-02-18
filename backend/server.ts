@@ -81,7 +81,7 @@ export function createServer(options: DeckServerOptions) {
 
     ws.on("message", (raw) => {
       const data = typeof raw === "string" ? raw : raw.toString();
-      handleMessage(data, ptyManager, (msg) => send(ws, msg));
+      handleMessage(data, ptyManager, (msg) => send(ws, msg), port);
     });
 
     ws.on("close", () => {
@@ -91,7 +91,7 @@ export function createServer(options: DeckServerOptions) {
 
   server.listen(port, hostname);
 
-  // 훅 엔드포인트 핸들러
+  // 훅 엔드포인트 핸들러 — 스크립트가 panelId + Claude 페이로드를 함께 전송
   function handleHookNotify(req: IncomingMessage, res: ServerResponse): Promise<void> {
     return new Promise((resolve) => {
       let body = "";
@@ -100,8 +100,15 @@ export function createServer(options: DeckServerOptions) {
       });
       req.on("end", () => {
         try {
-          const { panelId, message } = JSON.parse(body);
-          if (activeWs && panelId && message) {
+          const { panelId, payload } = JSON.parse(body);
+          console.log("[hook]", {
+            panelId,
+            event: payload?.hook_event_name,
+            hasWs: !!activeWs,
+            hasPanel: ptyManager.has(panelId),
+          });
+          if (panelId && activeWs && ptyManager.has(panelId)) {
+            const message = payload?.hook_event_name === "Stop" ? "stop" : "input";
             send(activeWs, { type: "hook-notify", panelId, message });
           }
           res.writeHead(200).end("OK");
@@ -113,7 +120,7 @@ export function createServer(options: DeckServerOptions) {
     });
   }
 
-  return { server, ptyManager };
+  return { server, wss, ptyManager };
 }
 
 /** 정적 파일 서빙 */
