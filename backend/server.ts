@@ -74,6 +74,9 @@ export function createServer(options: DeckServerOptions) {
       activeWs = null;
     }
 
+    // 새로고침 시 고아 PTY 정리
+    ptyManager.killAll();
+
     activeWs = ws;
 
     ws.on("message", (raw) => {

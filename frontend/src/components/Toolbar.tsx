@@ -4,10 +4,10 @@ import { useSettingsStore } from "../stores/settings-store";
 const MAX_PANELS = 4;
 
 export function Toolbar() {
-  const panelCount = usePanelStore((s) => s.panels.length);
+  const aliveCount = usePanelStore((s) => s.panels.filter((p) => p.status !== "exited").length);
   const addPanel = usePanelStore((s) => s.addPanel);
   const openSettings = useSettingsStore((s) => s.openSettings);
-  const isMaxPanels = panelCount >= MAX_PANELS;
+  const isMaxPanels = aliveCount >= MAX_PANELS;
 
   return (
     <header className="flex items-center justify-between px-5 py-1.5 bg-deck-panel/80 backdrop-blur-sm border-b border-dotted border-deck-border relative z-40 shrink-0">
