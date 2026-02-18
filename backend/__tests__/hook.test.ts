@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockReadFile = vi.fn();
-const mockWriteFile = vi.fn();
-const mockMkdir = vi.fn();
-const mockChmod = vi.fn();
+const { mockReadFile, mockWriteFile, mockMkdir, mockChmod } = vi.hoisted(() => ({
+  mockReadFile: vi.fn(),
+  mockWriteFile: vi.fn(),
+  mockMkdir: vi.fn(),
+  mockChmod: vi.fn(),
+}));
 
 vi.mock("node:fs/promises", () => ({
   readFile: mockReadFile,

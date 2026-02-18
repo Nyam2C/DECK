@@ -101,7 +101,12 @@ export function createServer(options: DeckServerOptions) {
       req.on("end", () => {
         try {
           const { panelId, payload } = JSON.parse(body);
-          console.log("[hook]", { panelId, event: payload?.hook_event_name, hasWs: !!activeWs, hasPanel: ptyManager.has(panelId) });
+          console.log("[hook]", {
+            panelId,
+            event: payload?.hook_event_name,
+            hasWs: !!activeWs,
+            hasPanel: ptyManager.has(panelId),
+          });
           if (panelId && activeWs && ptyManager.has(panelId)) {
             const message = payload?.hook_event_name === "Stop" ? "stop" : "input";
             send(activeWs, { type: "hook-notify", panelId, message });

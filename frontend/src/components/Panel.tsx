@@ -212,7 +212,6 @@ export function Panel({ panel, spanClassName }: PanelProps) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-
             {/* 훅 상태 표시 */}
             {panel.hookConnected === true && (
               <span className="text-deck-cyan text-[10px] tracking-wider" title="훅 연결됨">
