@@ -28,6 +28,7 @@ export interface Settings {
   port: number;
   scrollback: number;
   leaderKey: string;
+  defaultPath: string;
 }
 
 /** 기본 설정값 */
@@ -38,4 +39,5 @@ export const DEFAULT_SETTINGS: Settings = {
   port: 3000,
   scrollback: 5000,
   leaderKey: "Ctrl+Space",
+  defaultPath: "",
 };

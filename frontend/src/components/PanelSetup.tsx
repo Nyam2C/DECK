@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePanelStore } from "../stores/panel-store";
+import { useSettingsStore } from "../stores/settings-store";
 import { sendMessage, onServerMessage } from "../hooks/use-websocket";
 import { getProvider, getProviderList } from "../services/cli-provider";
 import type { OptionDef, CLIProvider } from "../services/cli-provider";
@@ -21,9 +22,10 @@ function buildDefaults(provider: CLIProvider): Record<string, unknown> {
 
 export function PanelSetup({ panelId }: PanelSetupProps) {
   const updatePanel = usePanelStore((s) => s.updatePanel);
+  const defaultPath = useSettingsStore((s) => s.defaultPath);
 
   const [cliKey, setCliKey] = useState<CliKey>("claude");
-  const [path, setPath] = useState("");
+  const [path, setPath] = useState(() => defaultPath);
   const [formState, setFormState] = useState<Record<string, unknown>>(() =>
     buildDefaults(getProvider("claude")),
   );
@@ -37,6 +39,7 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pathInputRef = useRef<HTMLInputElement>(null);
+  const candidateListRef = useRef<HTMLDivElement>(null);
 
   const provider = getProvider(cliKey);
 
@@ -93,12 +96,20 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
     [],
   );
 
-  // 자동완성 후보 선택
+  // 자동완성 후보 선택 → 해당 폴더 내부를 다시 자동완성
   function selectCandidate(value: string) {
-    setPath(value);
-    setShowCandidates(false);
-    setCandidates([]);
+    const withSlash = value.endsWith("/") ? value : value + "/";
+    setPath(withSlash);
     setSelectedIndex(-1);
+    sendMessage({ type: "autocomplete", panelId, partial: withSlash });
+  }
+
+  // 선택된 항목으로 스크롤
+  function scrollToSelected(index: number) {
+    const list = candidateListRef.current;
+    if (!list || index < 0) return;
+    const item = list.children[index] as HTMLElement | undefined;
+    item?.scrollIntoView({ block: "nearest" });
   }
 
   // 경로 입력 키보드 핸들러
@@ -107,10 +118,14 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setSelectedIndex((prev) => (prev < candidates.length - 1 ? prev + 1 : 0));
+      const next = selectedIndex < candidates.length - 1 ? selectedIndex + 1 : 0;
+      setSelectedIndex(next);
+      scrollToSelected(next);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : candidates.length - 1));
+      const next = selectedIndex > 0 ? selectedIndex - 1 : candidates.length - 1;
+      setSelectedIndex(next);
+      scrollToSelected(next);
     } else if (e.key === "Enter" && selectedIndex >= 0) {
       e.preventDefault();
       selectCandidate(candidates[selectedIndex]);
@@ -303,7 +318,7 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
           className="w-full bg-deck-bg border border-dashed border-deck-border px-2 py-1.5 text-deck-text font-term text-xs focus:border-deck-cyan/50 outline-none"
         />
         {showCandidates && candidates.length > 0 && (
-          <div className="absolute z-10 left-0 right-0 mt-0.5 bg-deck-bg border border-deck-border max-h-32 overflow-y-auto">
+          <div ref={candidateListRef} className="absolute z-10 left-0 right-0 mt-0.5 bg-deck-bg border border-deck-border max-h-32 overflow-y-auto">
             {candidates.map((c, i) => (
               <button
                 key={c}

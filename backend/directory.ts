@@ -13,9 +13,10 @@ export async function autocomplete(partial: string): Promise<string[]> {
   // ~ 확장
   const expanded = partial.startsWith("~") ? partial.replace("~", homedir()) : partial;
 
+  const endsWithSlash = partial.endsWith("/") || partial.endsWith("\\");
   const resolved = resolve(expanded);
-  const parent = dirname(resolved);
-  const prefix = basename(resolved);
+  const parent = endsWithSlash ? resolved : dirname(resolved);
+  const prefix = endsWithSlash ? "" : basename(resolved);
 
   try {
     const entries = await readdir(parent, { withFileTypes: true });
