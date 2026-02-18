@@ -1,5 +1,8 @@
+import { useRef } from "react";
 import { usePanelStore } from "../stores/panel-store";
 import { PanelSetup } from "./PanelSetup";
+import { useTerminal } from "../hooks/use-terminal";
+import { sendMessage } from "../hooks/use-websocket";
 import type { Panel as PanelType, PanelStatus } from "../types";
 
 interface PanelProps {
@@ -42,6 +45,52 @@ function getStatusLabel(status: PanelStatus): { text: string; color: string } | 
   }
 }
 
+/** 터미널 뷰 — xterm.js 렌더링 */
+function TerminalView({ panelId }: { panelId: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  useTerminal({ panelId, containerRef });
+  return <div ref={containerRef} className="w-full h-full pl-2" />;
+}
+
+/** 종료 뷰 — 종료 코드 + 재시작/닫기 버튼 */
+function ExitedView({ panel }: { panel: PanelType }) {
+  const updatePanel = usePanelStore((s) => s.updatePanel);
+  const removePanel = usePanelStore((s) => s.removePanel);
+
+  function handleRestart() {
+    sendMessage({
+      type: "create",
+      panelId: panel.id,
+      cli: panel.cli,
+      path: panel.path,
+      options: panel.options,
+    });
+    updatePanel(panel.id, { status: "active", exitCode: undefined });
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-3 p-4">
+      <span className="text-deck-dim text-xs">
+        프로세스 종료 (코드: {panel.exitCode ?? "?"})
+      </span>
+      <div className="flex gap-2">
+        <button
+          onClick={handleRestart}
+          className="px-3 py-1 text-xs border border-deck-cyan text-deck-cyan hover:bg-deck-cyan/15 transition-colors"
+        >
+          재시작
+        </button>
+        <button
+          onClick={() => removePanel(panel.id)}
+          className="px-3 py-1 text-xs border border-dashed border-deck-border text-deck-dim hover:text-deck-pink hover:border-deck-pink/50 transition-colors"
+        >
+          패널 닫기
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function Panel({ panel, spanClassName }: PanelProps) {
   const focusedId = usePanelStore((s) => s.focusedId);
   const setFocus = usePanelStore((s) => s.setFocus);
@@ -56,9 +105,9 @@ export function Panel({ panel, spanClassName }: PanelProps) {
   const statusLabel = getStatusLabel(panel.status);
 
   function handleClose() {
-    // 활성 세션은 확인 다이얼로그 (Phase 4에서 PTY kill 연동)
-    if (panel.status === "active" || panel.status === "input") {
+    if (panel.status === "active" || panel.status === "idle" || panel.status === "input") {
       if (!confirm("활성 세션이 종료됩니다. 계속하시겠습니까?")) return;
+      sendMessage({ type: "kill", panelId: panel.id });
     }
     removePanel(panel.id);
   }
@@ -70,11 +119,12 @@ export function Panel({ panel, spanClassName }: PanelProps) {
   return (
     <div
       className={`flex flex-col rounded border bg-deck-panel overflow-hidden cursor-pointer transition-all duration-300 ${statusClasses} ${spanClassName}`}
+      style={{ minHeight: 0 }}
       onClick={() => setFocus(panel.id)}
     >
       {/* 패널 헤더 */}
       <div
-        className={`flex items-center justify-between px-3 py-2 border-b border-dotted border-deck-border ${
+        className={`flex items-center justify-between px-3 py-2 border-b border-dotted border-deck-border shrink-0 ${
           isPinned ? "bg-deck-cyan/10" : "bg-deck-bg/50"
         }`}
       >
@@ -145,14 +195,13 @@ export function Panel({ panel, spanClassName }: PanelProps) {
       </div>
 
       {/* 패널 본문 */}
-      <div className="flex-1 overflow-auto min-h-0">
+      <div style={{ flex: "1 1 0%", minHeight: 0, overflowY: "auto" }}>
         {panel.status === "setup" ? (
           <PanelSetup panelId={panel.id} />
+        ) : panel.status === "exited" ? (
+          <ExitedView panel={panel} />
         ) : (
-          // Phase 4에서 터미널 div로 교체
-          <div className="p-3 font-term text-xs leading-relaxed">
-            <span className="text-deck-dim">터미널 연결 대기중...</span>
-          </div>
+          <TerminalView panelId={panel.id} />
         )}
       </div>
     </div>

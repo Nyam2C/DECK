@@ -23,18 +23,18 @@ export class PtyManager {
    * cwd: 작업 디렉토리
    * cols, rows: 터미널 초기 크기
    */
-  create(command: string, args: string[], cwd: string, cols: number, rows: number): string {
+  create(command: string, args: string[], cwd: string, cols: number, rows: number, panelId?: string): string {
     if (this.sessions.size >= MAX_SESSIONS) {
       throw new Error(`최대 ${MAX_SESSIONS}개 세션까지 생성 가능`);
     }
 
-    const id = crypto.randomUUID();
+    const id = panelId ?? crypto.randomUUID();
     const shell = pty.spawn(command, args, {
       name: "xterm-256color",
       cols,
       rows,
       cwd,
-      env: { ...process.env, DECK_PANEL_ID: id },
+      env: { ...process.env, DECK_PANEL_ID: id, CLAUDECODE: "" },
     });
 
     const session: PtySession = { id, pty: shell, command, cwd };

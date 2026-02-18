@@ -27,7 +27,7 @@ describe("handleMessage", () => {
       send,
     );
 
-    expect(manager.create).toHaveBeenCalledWith("claude", ["--model", "sonnet"], "/tmp", 80, 24);
+    expect(manager.create).toHaveBeenCalledWith("claude", ["--model", "sonnet"], "/tmp", 80, 24, undefined);
     expect(send).toHaveBeenCalledWith({ type: "created", panelId: "test-id" });
   });
 
@@ -153,6 +153,6 @@ describe("handleMessage", () => {
       send,
     );
 
-    expect(manager.create).toHaveBeenCalledWith("bash", [], "/tmp", 80, 24);
+    expect(manager.create).toHaveBeenCalledWith("bash", [], "/tmp", 80, 24, undefined);
   });
 });

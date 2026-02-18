@@ -1,7 +1,7 @@
 // ═══════════════════════ 클라이언트 → 서버 ═══════════════════════
 
 export type ClientMessage =
-  | { type: "create"; cli: string; path: string; options: string }
+  | { type: "create"; cli: string; path: string; options: string; panelId?: string }
   | { type: "input"; panelId: string; data: string }
   | { type: "resize"; panelId: string; cols: number; rows: number }
   | { type: "kill"; panelId: string }

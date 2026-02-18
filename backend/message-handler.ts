@@ -24,7 +24,7 @@ export function handleMessage(raw: string, ptyManager: PtyManager, send: SendFn)
         // options 문자열을 공백으로 분리하여 args 배열 구성
         // 예: "--model sonnet --permission-mode plan" → ["--model", "sonnet", ...]
         const args = msg.options ? msg.options.split(/\s+/).filter(Boolean) : [];
-        const panelId = ptyManager.create(msg.cli, args, msg.path, 80, 24);
+        const panelId = ptyManager.create(msg.cli, args, msg.path, 80, 24, msg.panelId);
         send({ type: "created", panelId });
       } catch (e) {
         send({
