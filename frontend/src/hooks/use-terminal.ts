@@ -53,9 +53,24 @@ export function useTerminal({ panelId, containerRef }: UseTerminalOptions): void
       // 캔버스 렌더러로 폴백 (기본)
     }
 
-    // 4. 키 입력 → WebSocket
+    // 4. 키 입력 → WebSocket (배치 버퍼: 짧은 간격 내 연속 입력을 하나로 묶어 전송)
+    let inputBuf = "";
+    let inputTimer: ReturnType<typeof setTimeout> | null = null;
+    const INPUT_BATCH_MS = 6;
+
+    const flushInput = () => {
+      if (inputBuf) {
+        sendMessage({ type: "input", panelId, data: inputBuf });
+        inputBuf = "";
+      }
+      inputTimer = null;
+    };
+
     const onDataDisposable = terminal.onData((data) => {
-      sendMessage({ type: "input", panelId, data });
+      inputBuf += data;
+      if (!inputTimer) {
+        inputTimer = setTimeout(flushInput, INPUT_BATCH_MS);
+      }
     });
 
     // 5. 서버 메시지 구독 → 터미널 출력
@@ -83,6 +98,10 @@ export function useTerminal({ panelId, containerRef }: UseTerminalOptions): void
     return () => {
       resizeObserver.disconnect();
       if (rafId !== null) cancelAnimationFrame(rafId);
+      if (inputTimer) {
+        clearTimeout(inputTimer);
+        flushInput();
+      }
       onDataDisposable.dispose();
       unsubscribe();
       terminal.dispose();
