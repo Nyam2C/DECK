@@ -10,12 +10,14 @@ import {
   onServerMessage,
   connectWebSocket,
 } from "./hooks/use-websocket";
+import { useKeyboard } from "./hooks/use-keyboard";
 
 export function App() {
   const isSettingsOpen = useSettingsStore((s) => s.isOpen);
   const theme = useSettingsStore((s) => s.theme);
   const connectionState = useWsState((s) => s.connectionState);
   const wasConnected = useWsState((s) => s.wasConnected);
+  const { leaderActive } = useKeyboard();
 
   // 테마 적용
   useEffect(() => {
@@ -166,6 +168,13 @@ export function App() {
             <div className="text-deck-pink text-sm">서버 연결이 끊어졌습니다</div>
             <div className="text-deck-dim text-xs">자동 재연결 시도 중...</div>
           </div>
+        </div>
+      )}
+
+      {/* Leader Key 인디케이터 */}
+      {leaderActive && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-deck-panel border border-deck-cyan px-4 py-1.5 text-xs text-deck-cyan animate-fade-in">
+          Ctrl+Space <span className="text-deck-dim">···</span> 키를 입력하세요
         </div>
       )}
     </div>

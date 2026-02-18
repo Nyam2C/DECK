@@ -144,6 +144,15 @@ export function Panel({ panel, spanClassName }: PanelProps) {
   const setPinned = usePanelStore((s) => s.setPinned);
   const [confirming, setConfirming] = useState(false);
 
+  // deck:close-panel CustomEvent로 포커스된 패널 닫기
+  useEffect(() => {
+    function onClosePanel() {
+      if (usePanelStore.getState().focusedId === panel.id) handleClose();
+    }
+    document.addEventListener("deck:close-panel", onClosePanel);
+    return () => document.removeEventListener("deck:close-panel", onClosePanel);
+  }, [panel.id]);
+
   function handleRegisterHook() {
     sendMessage({ type: "register-hook", panelId: panel.id });
   }
