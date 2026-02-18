@@ -15,7 +15,9 @@ export function Toolbar() {
     <header className="flex items-center justify-between px-5 py-1.5 min-h-[52px] bg-deck-panel/80 backdrop-blur-sm border-b border-dotted border-deck-border relative z-40 shrink-0">
       {/* 좌측: 로고 */}
       <div className="flex items-center gap-2">
-        {isMiku && <img src="/sprites/miku-idle.gif" alt="" className="miku-sprite h-10 shrink-0" />}
+        {isMiku && (
+          <img src="/sprites/miku-idle.gif" alt="" className="miku-sprite h-10 shrink-0" />
+        )}
         <span className="text-deck-cyan text-xl tracking-wider font-bold">▪ DECK</span>
         {isMiku && <span className="text-deck-gold text-[10px] animate-sparkle opacity-60">✦</span>}
       </div>
@@ -43,7 +45,9 @@ export function Toolbar() {
 
       {/* 우측: 버튼 */}
       <div className="flex items-center gap-2">
-        {isMiku && <img src="/sprites/miku-run.gif" alt="" className="miku-sprite h-9 shrink-0 opacity-80" />}
+        {isMiku && (
+          <img src="/sprites/miku-run.gif" alt="" className="miku-sprite h-9 shrink-0 opacity-80" />
+        )}
         <button
           onClick={() => addPanel()}
           disabled={isMaxPanels}

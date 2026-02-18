@@ -211,7 +211,9 @@ function GeneralTab() {
           }}
           className="w-28 bg-deck-bg border border-dashed border-deck-border px-2 py-1.5 text-deck-text font-term text-xs focus:border-deck-cyan/50 outline-none"
         />
-        <div className="text-deck-dim text-[10px] mt-1 pl-1">터미널 스크롤백 줄 수 (1000–50000)</div>
+        <div className="text-deck-dim text-[10px] mt-1 pl-1">
+          터미널 스크롤백 줄 수 (1000–50000)
+        </div>
       </div>
       <div className="text-deck-border text-center tracking-[0.3em] text-[10px]">
         · · · · · · · · · · · · · · · · · · ·
