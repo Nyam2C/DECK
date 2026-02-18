@@ -1,6 +1,7 @@
 import type { ClientMessage, ServerMessage } from "./types";
 import type { PtyManager } from "./pty-manager";
 import { autocomplete } from "./directory";
+import { checkHook, registerHook } from "./hook";
 
 type SendFn = (msg: ServerMessage) => void;
 
@@ -8,7 +9,12 @@ type SendFn = (msg: ServerMessage) => void;
  * WebSocket으로 수신한 JSON 문자열을 파싱하고,
  * 메시지 타입에 따라 적절한 PTY 매니저 메서드를 호출한다.
  */
-export function handleMessage(raw: string, ptyManager: PtyManager, send: SendFn): void {
+export function handleMessage(
+  raw: string,
+  ptyManager: PtyManager,
+  send: SendFn,
+  port: number,
+): void {
   let msg: ClientMessage;
 
   try {
@@ -26,6 +32,13 @@ export function handleMessage(raw: string, ptyManager: PtyManager, send: SendFn)
         const args = msg.options ? msg.options.split(/\s+/).filter(Boolean) : [];
         const panelId = ptyManager.create(msg.cli, args, msg.path, 80, 24, msg.panelId);
         send({ type: "created", panelId });
+
+        // Claude CLI일 때 훅 등록 상태 확인
+        if (msg.cli === "claude") {
+          checkHook(port).then((connected) => {
+            send({ type: "hook-status", panelId, connected });
+          });
+        }
       } catch (e) {
         send({
           type: "error",
@@ -71,6 +84,21 @@ export function handleMessage(raw: string, ptyManager: PtyManager, send: SendFn)
       autocomplete(msg.partial).then((candidates) => {
         send({ type: "autocomplete-result", panelId: msg.panelId, candidates });
       });
+      break;
+    }
+
+    case "register-hook": {
+      registerHook(port)
+        .then(() => {
+          send({ type: "hook-status", panelId: msg.panelId, connected: true });
+        })
+        .catch((e) => {
+          send({
+            type: "error",
+            panelId: msg.panelId,
+            message: e instanceof Error ? e.message : "훅 등록 실패",
+          });
+        });
       break;
     }
 

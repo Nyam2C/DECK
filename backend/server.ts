@@ -81,7 +81,7 @@ export function createServer(options: DeckServerOptions) {
 
     ws.on("message", (raw) => {
       const data = typeof raw === "string" ? raw : raw.toString();
-      handleMessage(data, ptyManager, (msg) => send(ws, msg));
+      handleMessage(data, ptyManager, (msg) => send(ws, msg), port);
     });
 
     ws.on("close", () => {

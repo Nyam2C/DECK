@@ -112,9 +112,18 @@ export function Panel({ panel, spanClassName }: PanelProps) {
   const focusedId = usePanelStore((s) => s.focusedId);
   const setFocus = usePanelStore((s) => s.setFocus);
   const removePanel = usePanelStore((s) => s.removePanel);
+  const updatePanel = usePanelStore((s) => s.updatePanel);
   const pinnedId = usePanelStore((s) => s.pinnedId);
   const setPinned = usePanelStore((s) => s.setPinned);
   const [confirming, setConfirming] = useState(false);
+
+  function handleRegisterHook() {
+    sendMessage({ type: "register-hook", panelId: panel.id });
+  }
+
+  function handleDismissHook() {
+    updatePanel(panel.id, { hookConnected: null });
+  }
 
   const isFocused = focusedId === panel.id;
   const isPinned = pinnedId === panel.id;
@@ -217,7 +226,14 @@ export function Panel({ panel, spanClassName }: PanelProps) {
               </span>
             )}
             {panel.hookConnected === false && (
-              <span className="text-xs cursor-pointer" title="훅 미연결 — 클릭하여 설정">
+              <span
+                className="text-xs cursor-pointer"
+                title="훅 미연결 — 클릭하여 설정"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRegisterHook();
+                }}
+              >
                 ⚠
               </span>
             )}
@@ -254,13 +270,43 @@ export function Panel({ panel, spanClassName }: PanelProps) {
       )}
 
       {/* 패널 본문 */}
-      <div style={{ flex: "1 1 0%", minHeight: 0, overflowY: "auto" }}>
+      <div style={{ flex: "1 1 0%", minHeight: 0, overflowY: "auto" }} className="relative">
         {panel.status === "setup" ? (
           <PanelSetup panelId={panel.id} />
         ) : panel.status === "exited" ? (
           <ExitedView panel={panel} />
         ) : (
-          <TerminalView panelId={panel.id} />
+          <>
+            {panel.hookConnected === false && (
+              <div className="absolute inset-x-0 top-0 z-10 bg-deck-bg/95 border-b border-dashed border-deck-gold p-3 text-xs space-y-2">
+                <div className="text-deck-gold">▪ 알림 훅 미등록</div>
+                <div className="text-deck-dim">
+                  Claude Code의 입력 대기 알림을 받으려면 훅 등록이 필요합니다
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRegisterHook();
+                    }}
+                    className="px-3 py-1 border border-deck-gold text-deck-gold hover:bg-deck-gold/15 transition-colors"
+                  >
+                    등록
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDismissHook();
+                    }}
+                    className="px-3 py-1 border border-dashed border-deck-border text-deck-dim hover:text-deck-text transition-colors"
+                  >
+                    나중에
+                  </button>
+                </div>
+              </div>
+            )}
+            <TerminalView panelId={panel.id} />
+          </>
         )}
       </div>
     </div>

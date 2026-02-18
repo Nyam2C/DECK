@@ -21,12 +21,26 @@ export function App() {
 
   // 서버 메시지 라우팅
   useEffect(() => {
+    // "input" 진입 시각 기록 — 프롬프트 렌더링 출력과 실제 응답을 구분하기 위한 디바운스
+    const inputEnteredAt = new Map<string, number>();
+    const INPUT_GRACE_MS = 2000;
+
     return onServerMessage((msg) => {
       const { updatePanel, setStatus } = usePanelStore.getState();
 
       switch (msg.type) {
+        case "output": {
+          // "input" 상태에서 유예 시간 이후 출력 발생 → 사용자가 응답했으므로 "active"로 복귀
+          const enteredAt = inputEnteredAt.get(msg.panelId);
+          if (enteredAt !== undefined && Date.now() - enteredAt > INPUT_GRACE_MS) {
+            setStatus(msg.panelId, "active");
+            inputEnteredAt.delete(msg.panelId);
+          }
+          break;
+        }
         case "exited":
           updatePanel(msg.panelId, { status: "exited", exitCode: msg.exitCode });
+          inputEnteredAt.delete(msg.panelId);
           break;
         case "status":
           setStatus(msg.panelId, msg.state);
@@ -36,6 +50,7 @@ export function App() {
           break;
         case "hook-notify":
           setStatus(msg.panelId, "input");
+          inputEnteredAt.set(msg.panelId, Date.now());
           break;
         case "error":
           // PanelSetup에서 개별 처리하므로 panelId 없는 글로벌 에러만 로깅
