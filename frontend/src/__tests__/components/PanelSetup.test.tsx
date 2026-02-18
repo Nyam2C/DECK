@@ -9,7 +9,12 @@ describe("PanelSetup — 폼 렌더링 로직", () => {
     const provider = getProvider("claude");
     const basic = provider.options.filter((o) => o.group === "basic");
     expect(basic).toHaveLength(4);
-    expect(basic.map((o) => o.key)).toEqual(["session", "permissionMode", "skipPermissions", "model"]);
+    expect(basic.map((o) => o.key)).toEqual([
+      "session",
+      "permissionMode",
+      "skipPermissions",
+      "model",
+    ]);
   });
 
   it("Claude Code 프로바이더는 고급 옵션 10개를 갖는다", () => {

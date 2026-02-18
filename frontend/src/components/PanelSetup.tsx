@@ -79,22 +79,19 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
   }, [panelId]);
 
   // 경로 입력 시 디렉토리 자동완성 (debounce 300ms)
-  const handlePathChange = useCallback(
-    (value: string) => {
-      setPath(value);
-      setError(null);
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      if (value.length >= 2) {
-        debounceRef.current = setTimeout(() => {
-          sendMessage({ type: "autocomplete", panelId, partial: value });
-        }, 300);
-      } else {
-        setCandidates([]);
-        setShowCandidates(false);
-      }
-    },
-    [],
-  );
+  const handlePathChange = useCallback((value: string) => {
+    setPath(value);
+    setError(null);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (value.length >= 2) {
+      debounceRef.current = setTimeout(() => {
+        sendMessage({ type: "autocomplete", panelId, partial: value });
+      }, 300);
+    } else {
+      setCandidates([]);
+      setShowCandidates(false);
+    }
+  }, []);
 
   // 자동완성 후보 선택 → 해당 폴더 내부를 다시 자동완성
   function selectCandidate(value: string) {
@@ -161,9 +158,11 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
 
     const trimmedPath = path.trim();
     const name = trimmedPath.split("/").pop() || "새 패널";
-    const cli = cliKey === "claude" ? "claude" : (formState.command as string).split(/\s+/)[0] || "";
+    const cli =
+      cliKey === "claude" ? "claude" : (formState.command as string).split(/\s+/)[0] || "";
     const cmd = provider.buildCommand(formState);
-    const options = cliKey === "claude" ? cmd.replace(/^claude\s*/, "") : cmd.split(/\s+/).slice(1).join(" ");
+    const options =
+      cliKey === "claude" ? cmd.replace(/^claude\s*/, "") : cmd.split(/\s+/).slice(1).join(" ");
 
     setError(null);
     setStarting(true);
@@ -250,7 +249,9 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
       case "text":
         return (
           <div key={opt.key}>
-            <div className="text-deck-dim mb-1">{"\u25AA"} {opt.label}</div>
+            <div className="text-deck-dim mb-1">
+              {"\u25AA"} {opt.label}
+            </div>
             <input
               type="text"
               value={(value as string) || ""}
@@ -264,7 +265,9 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
       case "textarea":
         return (
           <div key={opt.key}>
-            <div className="text-deck-dim mb-1">{"\u25AA"} {opt.label}</div>
+            <div className="text-deck-dim mb-1">
+              {"\u25AA"} {opt.label}
+            </div>
             <textarea
               value={(value as string) || ""}
               onChange={(e) => setField(opt.key, e.target.value)}
@@ -318,7 +321,10 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
           className="w-full bg-deck-bg border border-dashed border-deck-border px-2 py-1.5 text-deck-text font-term text-xs focus:border-deck-cyan/50 outline-none"
         />
         {showCandidates && candidates.length > 0 && (
-          <div ref={candidateListRef} className="absolute z-10 left-0 right-0 mt-0.5 bg-deck-bg border border-deck-border max-h-32 overflow-y-auto">
+          <div
+            ref={candidateListRef}
+            className="absolute z-10 left-0 right-0 mt-0.5 bg-deck-bg border border-deck-border max-h-32 overflow-y-auto"
+          >
             {candidates.map((c, i) => (
               <button
                 key={c}

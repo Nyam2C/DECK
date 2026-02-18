@@ -31,13 +31,21 @@ describe("claudeCodeProvider.buildCommand", () => {
   });
 
   it("resume 세션 플래그를 추가한다", () => {
-    const cmd = claudeCodeProvider.buildCommand({ session: "resume", model: "opus", permissionMode: "plan" });
+    const cmd = claudeCodeProvider.buildCommand({
+      session: "resume",
+      model: "opus",
+      permissionMode: "plan",
+    });
     expect(cmd).toContain("-r");
     expect(cmd).not.toContain("-c");
   });
 
   it("new 세션일 때 세션 플래그가 없다", () => {
-    const cmd = claudeCodeProvider.buildCommand({ session: "new", model: "opus", permissionMode: "plan" });
+    const cmd = claudeCodeProvider.buildCommand({
+      session: "new",
+      model: "opus",
+      permissionMode: "plan",
+    });
     expect(cmd).not.toContain("-c");
     expect(cmd).not.toContain("-r");
   });
