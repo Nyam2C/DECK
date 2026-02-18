@@ -49,7 +49,6 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
     if (skipPermissions) parts.push("--dangerously-skip-permissions");
     if (sessionMode === "continue") parts.push("-c");
     if (sessionMode === "resume") parts.push("-r");
-    if (path) parts.push(path);
     return parts.join(" ");
   }
 

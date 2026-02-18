@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { usePanelStore } from "../stores/panel-store";
 import { PanelSetup } from "./PanelSetup";
 import { useTerminal } from "../hooks/use-terminal";
@@ -97,19 +97,27 @@ export function Panel({ panel, spanClassName }: PanelProps) {
   const removePanel = usePanelStore((s) => s.removePanel);
   const pinnedId = usePanelStore((s) => s.pinnedId);
   const setPinned = usePanelStore((s) => s.setPinned);
+  const [confirming, setConfirming] = useState(false);
 
   const isFocused = focusedId === panel.id;
   const isPinned = pinnedId === panel.id;
+  const isActive = panel.status === "active" || panel.status === "idle" || panel.status === "input";
   const statusClasses = getStatusClasses(panel.status, isFocused);
   const statusIcon = getStatusIcon(panel.status, isFocused);
   const statusLabel = getStatusLabel(panel.status);
 
   function handleClose() {
-    if (panel.status === "active" || panel.status === "idle" || panel.status === "input") {
-      if (!confirm("활성 세션이 종료됩니다. 계속하시겠습니까?")) return;
-      sendMessage({ type: "kill", panelId: panel.id });
+    if (isActive) {
+      setConfirming(true);
+      return;
     }
     removePanel(panel.id);
+  }
+
+  function handleConfirmClose() {
+    sendMessage({ type: "kill", panelId: panel.id });
+    removePanel(panel.id);
+    setConfirming(false);
   }
 
   function handlePinToggle() {
@@ -122,7 +130,31 @@ export function Panel({ panel, spanClassName }: PanelProps) {
       style={{ minHeight: 0 }}
       onClick={() => setFocus(panel.id)}
     >
-      {/* 패널 헤더 */}
+      {/* 패널 헤더 — 확인 모드 */}
+      {confirming ? (
+        <div className="flex items-center justify-between px-3 py-2 border-b border-dotted border-deck-border shrink-0 bg-deck-bg/50">
+          <div className="flex items-center gap-2">
+            <span className="text-deck-pink text-xs animate-pulse">▪</span>
+            <span className="text-deck-pink text-xs">세션 종료</span>
+            <span className="text-deck-border text-xs tracking-[0.3em]">·····</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); handleConfirmClose(); }}
+              className="text-[10px] px-2 py-0.5 border border-dashed border-deck-pink text-deck-pink hover:bg-deck-pink/15 transition-colors"
+            >
+              종료
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setConfirming(false); }}
+              className="text-[10px] px-2 py-0.5 border border-dashed border-deck-border text-deck-dim hover:text-deck-text transition-colors"
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      ) : (
+      /* 패널 헤더 — 기본 */
       <div
         className={`flex items-center justify-between px-3 py-2 border-b border-dotted border-deck-border shrink-0 ${
           isPinned ? "bg-deck-cyan/10" : "bg-deck-bg/50"
@@ -193,6 +225,7 @@ export function Panel({ panel, spanClassName }: PanelProps) {
           </button>
         </div>
       </div>
+      )}
 
       {/* 패널 본문 */}
       <div style={{ flex: "1 1 0%", minHeight: 0, overflowY: "auto" }}>
