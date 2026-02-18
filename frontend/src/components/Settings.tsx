@@ -92,12 +92,39 @@ export function Settings() {
   );
 }
 
+import type { ThemeId } from "../types";
+
+const THEME_OPTIONS: { id: ThemeId; label: string; desc: string }[] = [
+  { id: "miku", label: "Miku", desc: "사이버펑크 네온" },
+  { id: "blue-dark", label: "Blue Dark", desc: "블루 다크" },
+];
+
 function GeneralTab() {
-  const { fontSize, defaultPath, updateSettings } = useSettingsStore();
+  const { fontSize, defaultPath, startBehavior, port, scrollback, theme, updateSettings } =
+    useSettingsStore();
   const fontSizes = [12, 14, 16, 18, 20];
 
   return (
     <div className="space-y-4 text-xs">
+      <div>
+        <div className="text-deck-dim mb-2">▪ 테마</div>
+        <div className="grid grid-cols-2 gap-1.5 pl-2">
+          {THEME_OPTIONS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => updateSettings({ theme: t.id })}
+              className={`px-3 py-1.5 text-left cursor-pointer transition-all ${
+                theme === t.id
+                  ? "bg-deck-cyan/15 border border-deck-cyan/50 text-deck-cyan shadow-[0_0_6px_#39C5BB33]"
+                  : "bg-deck-bg border border-dashed border-deck-border text-deck-dim hover:border-deck-cyan/50 hover:text-deck-text"
+              }`}
+            >
+              <div>{t.label}</div>
+              <div className="text-[10px] opacity-60">{t.desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
       <div>
         <div className="text-deck-dim mb-2">▪ 기본 글씨 크기</div>
         <div className="flex gap-1 pl-2">
@@ -127,6 +154,65 @@ function GeneralTab() {
         />
         <div className="text-deck-dim text-[10px] mt-1 pl-1">
           새 패널의 경로 초기값 (비어있으면 ~/project)
+        </div>
+      </div>
+      <div>
+        <div className="text-deck-dim mb-2">▪ 시작 동작</div>
+        <div className="flex gap-3 pl-2">
+          {(["empty", "restore"] as const).map((opt) => (
+            <label key={opt} className="flex items-center gap-1.5 cursor-pointer">
+              <span
+                className={`w-3 h-3 border flex items-center justify-center text-[8px] ${
+                  startBehavior === opt
+                    ? "border-deck-cyan text-deck-cyan"
+                    : "border-deck-border text-transparent"
+                }`}
+              >
+                ■
+              </span>
+              <span
+                className={
+                  startBehavior === opt ? "text-deck-cyan" : "text-deck-dim hover:text-deck-text"
+                }
+                onClick={() => updateSettings({ startBehavior: opt })}
+              >
+                {opt === "empty" ? "빈 상태로 시작" : "이전 상태 복원"}
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+      <div>
+        <div className="text-deck-dim mb-2">▪ 포트 번호</div>
+        <input
+          type="number"
+          value={port}
+          min={1024}
+          max={65535}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            if (v >= 1024 && v <= 65535) updateSettings({ port: v });
+          }}
+          className="w-28 bg-deck-bg border border-dashed border-deck-border px-2 py-1.5 text-deck-text font-term text-xs focus:border-deck-cyan/50 outline-none"
+        />
+        <div className="text-deck-dim text-[10px] mt-1 pl-1">서버 포트 (1024–65535)</div>
+      </div>
+      <div>
+        <div className="text-deck-dim mb-2">▪ 스크롤백 버퍼</div>
+        <input
+          type="number"
+          value={scrollback}
+          min={1000}
+          max={50000}
+          step={1000}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            if (v >= 1000 && v <= 50000) updateSettings({ scrollback: v });
+          }}
+          className="w-28 bg-deck-bg border border-dashed border-deck-border px-2 py-1.5 text-deck-text font-term text-xs focus:border-deck-cyan/50 outline-none"
+        />
+        <div className="text-deck-dim text-[10px] mt-1 pl-1">
+          터미널 스크롤백 줄 수 (1000–50000)
         </div>
       </div>
       <div className="text-deck-border text-center tracking-[0.3em] text-[10px]">

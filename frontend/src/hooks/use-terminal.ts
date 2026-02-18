@@ -6,6 +6,23 @@ import "@xterm/xterm/css/xterm.css";
 
 import { sendMessage, onServerMessage } from "./use-websocket";
 import { useSettingsStore } from "../stores/settings-store";
+import type { ThemeId } from "../types";
+import type { ITheme } from "@xterm/xterm";
+
+const TERMINAL_THEMES: Record<ThemeId, ITheme> = {
+  miku: {
+    background: "#12121f",
+    foreground: "#e0e0e8",
+    cursor: "#39c5bb",
+    selectionBackground: "#39c5bb55",
+  },
+  "blue-dark": {
+    background: "#1a1a1a",
+    foreground: "#c0caf5",
+    cursor: "#7aa2f7",
+    selectionBackground: "#7aa2f755",
+  },
+};
 
 interface UseTerminalOptions {
   panelId: string;
@@ -18,6 +35,7 @@ export function useTerminal({ panelId, containerRef }: UseTerminalOptions): void
 
   const fontSize = useSettingsStore((s) => s.fontSize);
   const scrollback = useSettingsStore((s) => s.scrollback);
+  const theme = useSettingsStore((s) => s.theme);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -28,12 +46,7 @@ export function useTerminal({ panelId, containerRef }: UseTerminalOptions): void
       fontSize,
       scrollback,
       cursorBlink: true,
-      theme: {
-        background: "#12121f",
-        foreground: "#e0e0e8",
-        cursor: "#39c5bb",
-        selectionBackground: "#39c5bb55",
-      },
+      theme: TERMINAL_THEMES[theme] ?? TERMINAL_THEMES.miku,
     });
     termRef.current = terminal;
 
@@ -109,4 +122,11 @@ export function useTerminal({ panelId, containerRef }: UseTerminalOptions): void
       fitRef.current = null;
     };
   }, [panelId, containerRef, fontSize, scrollback]);
+
+  // 테마 변경 시 터미널 재생성 없이 옵션만 업데이트
+  useEffect(() => {
+    const terminal = termRef.current;
+    if (!terminal) return;
+    terminal.options.theme = TERMINAL_THEMES[theme] ?? TERMINAL_THEMES.miku;
+  }, [theme]);
 }

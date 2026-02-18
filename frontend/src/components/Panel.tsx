@@ -1,8 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePanelStore } from "../stores/panel-store";
 import { PanelSetup } from "./PanelSetup";
 import { useTerminal } from "../hooks/use-terminal";
-import { sendMessage } from "../hooks/use-websocket";
+import { sendMessage, onServerMessage } from "../hooks/use-websocket";
 import type { Panel as PanelType, PanelStatus } from "../types";
 
 interface PanelProps {
@@ -48,11 +48,34 @@ function getStatusLabel(status: PanelStatus): { text: string; color: string } | 
   }
 }
 
-/** 터미널 뷰 — xterm.js 렌더링 */
+/** 터미널 뷰 — xterm.js 렌더링 + 연결 중 오버레이 */
 function TerminalView({ panelId }: { panelId: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [hasOutput, setHasOutput] = useState(false);
   useTerminal({ panelId, containerRef });
-  return <div ref={containerRef} className="w-full h-full pl-2" />;
+
+  useEffect(() => {
+    setHasOutput(false);
+    return onServerMessage((msg) => {
+      if (msg.type === "output" && msg.panelId === panelId) {
+        setHasOutput(true);
+      }
+    });
+  }, [panelId]);
+
+  return (
+    <div className="w-full h-full pl-2 relative">
+      <div ref={containerRef} className="w-full h-full" />
+      {!hasOutput && (
+        <div className="absolute inset-0 flex items-center justify-center bg-deck-panel/80">
+          <div className="text-center space-y-2">
+            <div className="text-deck-cyan text-sm animate-pulse">▪▪▪</div>
+            <div className="text-deck-dim text-xs">연결 중...</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /** 종료 코드별 설명 메시지 */
@@ -114,6 +137,7 @@ function ExitedView({ panel }: { panel: PanelType }) {
 export function Panel({ panel, spanClassName }: PanelProps) {
   const focusedId = usePanelStore((s) => s.focusedId);
   const setFocus = usePanelStore((s) => s.setFocus);
+  const setStatus = usePanelStore((s) => s.setStatus);
   const removePanel = usePanelStore((s) => s.removePanel);
   const updatePanel = usePanelStore((s) => s.updatePanel);
   const pinnedId = usePanelStore((s) => s.pinnedId);
@@ -157,7 +181,10 @@ export function Panel({ panel, spanClassName }: PanelProps) {
     <div
       className={`flex flex-col rounded border bg-deck-panel overflow-hidden cursor-pointer transition-all duration-300 ${statusClasses} ${spanClassName}`}
       style={{ minHeight: 0 }}
-      onClick={() => setFocus(panel.id)}
+      onClick={() => {
+        setFocus(panel.id);
+        if (panel.status === "idle") setStatus(panel.id, "active");
+      }}
     >
       {/* 패널 헤더 — 확인 모드 */}
       {confirming ? (

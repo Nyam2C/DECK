@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ═══════════════════════ DECK 디자인 토큰 ═══════════════════════ */
+/* ═══════════════════════ DECK 디자인 토큰 (기본: miku) ═══════════════════════ */
 @theme {
   --color-deck-bg: #0a0a14;
   --color-deck-panel: #12121f;
@@ -10,6 +10,18 @@
   --color-deck-gold: #ffd700;
   --color-deck-text: #e0e0e8;
   --color-deck-dim: #6b6b80;
+}
+
+/* ═══════════════════════ 테마 오버라이드 ═══════════════════════ */
+[data-theme="blue-dark"] {
+  --color-deck-bg: #111111;
+  --color-deck-panel: #1a1a1a;
+  --color-deck-border: #2a2a2a;
+  --color-deck-cyan: #7aa2f7;
+  --color-deck-pink: #f7768e;
+  --color-deck-gold: #e0af68;
+  --color-deck-text: #c0caf5;
+  --color-deck-dim: #565f89;
 }
 
 /* ═══════════════════════ 애니메이션 ═══════════════════════ */
@@ -137,7 +149,7 @@
 }
 
 @utility dot-grid-bg {
-  background-image: radial-gradient(circle, #1e1e32 1px, transparent 1px);
+  background-image: radial-gradient(circle, var(--color-deck-border) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
@@ -165,12 +177,12 @@
 }
 
 .pixel-border {
-  border: 2px solid #39c5bb;
+  border: 2px solid var(--color-deck-cyan);
   box-shadow:
-    inset 0 0 0 2px #12121f,
-    inset 0 0 0 4px #39c5bb33,
-    0 0 24px #39c5bb22,
-    0 0 48px #39c5bb11;
+    inset 0 0 0 2px var(--color-deck-panel),
+    inset 0 0 0 4px color-mix(in srgb, var(--color-deck-cyan) 20%, transparent),
+    0 0 24px color-mix(in srgb, var(--color-deck-cyan) 13%, transparent),
+    0 0 48px color-mix(in srgb, var(--color-deck-cyan) 7%, transparent);
 }
 
 /* ═══════════════════════ 스크롤바 ═══════════════════════ */
@@ -178,16 +190,16 @@
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #12121f;
+  background: var(--color-deck-panel);
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e1e32;
+  background: var(--color-deck-border);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #39c5bb;
+  background: var(--color-deck-cyan);
 }
 ::selection {
-  background: #39c5bb33;
-  color: #e0e0e8;
+  background: color-mix(in srgb, var(--color-deck-cyan) 20%, transparent);
+  color: var(--color-deck-text);
 }

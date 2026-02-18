@@ -20,10 +20,13 @@ export interface Panel {
   exitCode?: number;
 }
 
+/** 사용 가능한 테마 */
+export type ThemeId = "miku" | "blue-dark";
+
 /** 설정값 */
 export interface Settings {
   fontSize: number;
-  theme: string;
+  theme: ThemeId;
   startBehavior: "empty" | "restore";
   port: number;
   scrollback: number;
@@ -34,7 +37,7 @@ export interface Settings {
 /** 기본 설정값 */
 export const DEFAULT_SETTINGS: Settings = {
   fontSize: 14,
-  theme: "dark",
+  theme: "miku",
   startBehavior: "empty",
   port: 3000,
   scrollback: 5000,
