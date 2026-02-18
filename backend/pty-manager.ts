@@ -6,14 +6,37 @@ const MAX_SESSIONS = 4;
 export type OnDataCallback = (id: string, data: string) => void;
 export type OnExitCallback = (id: string, exitCode: number) => void;
 
+const BATCH_INTERVAL = 16; // ~60fps
+
 export class PtyManager {
   private sessions = new Map<string, PtySession>();
   private onData: OnDataCallback;
   private onExit: OnExitCallback;
 
+  // 출력 배칭: 패널별 버퍼를 모아서 16ms마다 flush
+  private outputBuffers = new Map<string, string>();
+  private batchTimer: ReturnType<typeof setTimeout> | null = null;
+
   constructor(onData: OnDataCallback, onExit: OnExitCallback) {
     this.onData = onData;
     this.onExit = onExit;
+  }
+
+  private bufferOutput(id: string, data: string): void {
+    const existing = this.outputBuffers.get(id);
+    this.outputBuffers.set(id, existing ? existing + data : data);
+
+    if (!this.batchTimer) {
+      this.batchTimer = setTimeout(() => this.flushBuffers(), BATCH_INTERVAL);
+    }
+  }
+
+  private flushBuffers(): void {
+    this.batchTimer = null;
+    for (const [id, data] of this.outputBuffers) {
+      this.onData(id, data);
+    }
+    this.outputBuffers.clear();
   }
 
   /**
@@ -41,10 +64,16 @@ export class PtyManager {
     this.sessions.set(id, session);
 
     shell.onData((data: string) => {
-      this.onData(id, data);
+      this.bufferOutput(id, data);
     });
 
     shell.onExit(({ exitCode }: { exitCode: number }) => {
+      // 남은 버퍼 즉시 flush
+      const remaining = this.outputBuffers.get(id);
+      if (remaining) {
+        this.outputBuffers.delete(id);
+        this.onData(id, remaining);
+      }
       this.sessions.delete(id);
       this.onExit(id, exitCode);
     });
@@ -76,6 +105,11 @@ export class PtyManager {
 
   /** 모든 PTY 종료 (서버 셧다운 시) */
   killAll(): void {
+    if (this.batchTimer) {
+      clearTimeout(this.batchTimer);
+      this.batchTimer = null;
+    }
+    this.outputBuffers.clear();
     for (const [, session] of this.sessions) {
       session.pty.kill();
     }
