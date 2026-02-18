@@ -197,7 +197,7 @@ export function Panel({ panel, spanClassName }: PanelProps) {
         >
           <div className="flex items-center gap-2 min-w-0">
             <span className={`${statusIcon.color} text-xs`}>{statusIcon.icon}</span>
-            <span className="text-deck-text text-sm truncate">{panel.name}</span>
+            <span className="text-deck-text text-sm truncate max-w-[20ch]">{panel.name}</span>
 
             {isPinned && <span className="text-deck-cyan text-[10px] tracking-wider">[ PIN ]</span>}
 

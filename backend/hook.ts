@@ -119,6 +119,3 @@ export async function registerHook(port: number): Promise<void> {
 
   await writeSettings(settings);
 }
-
-/** 테스트용: settings 경로 반환 */
-export const _settingsPath = SETTINGS_PATH;
