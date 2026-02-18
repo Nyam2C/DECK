@@ -20,40 +20,41 @@ beforeEach(() => {
   mockChmod.mockResolvedValue(undefined);
 });
 
-// 다양한 형태의 DECK 훅 커맨드
-const curlCommand =
-  'curl -s http://127.0.0.1:3000/hook/notify -X POST -d \'{"panelId":"$DECK_PANEL_ID"}\'';
-const scriptCommand = "/home/user/.claude/hooks/deck-notify.sh";
+// DECK 훅 식별용 커맨드 (deck-notify 마커 포함)
+const deckCommand = "/home/user/.claude/hooks/deck-notify.sh";
+
+/** Stop + Notification 모두에 훅이 등록된 settings 생성 헬퍼 */
+function bothEventsSettings(command: string) {
+  const entry = { hooks: [{ type: "command", command }] };
+  return JSON.stringify({
+    hooks: { Stop: [entry], Notification: [entry] },
+  });
+}
 
 describe("checkHook", () => {
-  it("DECK_PANEL_ID를 포함하는 훅이 있으면 true를 반환한다", async () => {
-    mockReadFile.mockResolvedValue(
-      JSON.stringify({
-        hooks: {
-          Notification: [{ hooks: [{ type: "command", command: curlCommand }] }],
-        },
-      }),
-    );
+  it("Stop과 Notification 모두 DECK 훅이 있으면 true를 반환한다", async () => {
+    mockReadFile.mockResolvedValue(bothEventsSettings(deckCommand));
 
     expect(await checkHook(3000)).toBe(true);
   });
 
-  it("deck-notify.sh 스크립트 경로로 등록된 훅을 감지한다", async () => {
+  it("Notification만 있으면 false를 반환한다", async () => {
     mockReadFile.mockResolvedValue(
       JSON.stringify({
         hooks: {
-          Notification: [{ hooks: [{ type: "command", command: scriptCommand }] }],
+          Notification: [{ hooks: [{ type: "command", command: deckCommand }] }],
         },
       }),
     );
 
-    expect(await checkHook(3000)).toBe(true);
+    expect(await checkHook(3000)).toBe(false);
   });
 
   it("훅이 등록되어 있지 않으면 false를 반환한다", async () => {
     mockReadFile.mockResolvedValue(
       JSON.stringify({
         hooks: {
+          Stop: [{ hooks: [{ type: "command", command: "echo hello" }] }],
           Notification: [{ hooks: [{ type: "command", command: "echo hello" }] }],
         },
       }),
@@ -75,18 +76,17 @@ describe("checkHook", () => {
   });
 
   it("구 포맷 훅도 감지한다", async () => {
+    const entry = { type: "command", command: deckCommand };
     mockReadFile.mockResolvedValue(
       JSON.stringify({
-        hooks: {
-          Notification: [{ type: "command", command: curlCommand }],
-        },
+        hooks: { Stop: [entry], Notification: [entry] },
       }),
     );
 
     expect(await checkHook(3000)).toBe(true);
   });
 
-  it("Notification 필드가 없으면 false를 반환한다", async () => {
+  it("이벤트 필드가 없으면 false를 반환한다", async () => {
     mockReadFile.mockResolvedValue(JSON.stringify({ hooks: {} }));
 
     expect(await checkHook(3000)).toBe(false);
@@ -99,7 +99,6 @@ describe("registerHook", () => {
 
     await registerHook(3000);
 
-    // settings.json 쓰기 + 스크립트 쓰기 = 2회
     const settingsCall = mockWriteFile.mock.calls.find((c: string[]) =>
       c[0].includes("settings.json"),
     );
@@ -110,13 +109,15 @@ describe("registerHook", () => {
     expect(settingsCall).toBeDefined();
     expect(scriptCall).toBeDefined();
 
-    // settings.json에 스크립트 경로가 등록됨
+    // Stop + Notification 모두에 등록됨
     const written = JSON.parse(settingsCall![1] as string);
+    expect(written.hooks.Stop).toHaveLength(1);
     expect(written.hooks.Notification).toHaveLength(1);
+    expect(written.hooks.Stop[0].hooks[0].command).toContain("deck-notify.sh");
     expect(written.hooks.Notification[0].hooks[0].command).toContain("deck-notify.sh");
 
-    // 스크립트에 포트와 /dev/tcp가 포함됨
-    expect(scriptCall![1]).toContain("/dev/tcp/127.0.0.1/3000");
+    // 스크립트에 curl과 DECK_PANEL_ID가 포함됨
+    expect(scriptCall![1]).toContain("curl");
     expect(scriptCall![1]).toContain("DECK_PANEL_ID");
 
     // 실행 권한 부여
@@ -140,19 +141,14 @@ describe("registerHook", () => {
     );
     const written = JSON.parse(settingsCall![1] as string);
     expect(written.env).toEqual({ DEBUG: "true" });
+    expect(written.hooks.Stop).toHaveLength(1);
     expect(written.hooks.Notification).toHaveLength(2);
     expect(written.hooks.Notification[0].hooks[0].command).toBe("echo other");
     expect(written.hooks.Notification[1].hooks[0].command).toContain("deck-notify.sh");
   });
 
   it("이미 등록된 DECK 훅이 있으면 교체한다", async () => {
-    mockReadFile.mockResolvedValue(
-      JSON.stringify({
-        hooks: {
-          Notification: [{ hooks: [{ type: "command", command: curlCommand }] }],
-        },
-      }),
-    );
+    mockReadFile.mockResolvedValue(bothEventsSettings(deckCommand));
 
     await registerHook(5000);
 
@@ -160,22 +156,22 @@ describe("registerHook", () => {
       c[0].includes("settings.json"),
     );
     const written = JSON.parse(settingsCall![1] as string);
+    expect(written.hooks.Stop).toHaveLength(1);
     expect(written.hooks.Notification).toHaveLength(1);
-    expect(written.hooks.Notification[0].hooks[0].command).toContain("deck-notify.sh");
+    expect(written.hooks.Stop[0].hooks[0].command).toContain("deck-notify.sh");
 
     // 스크립트가 새 포트로 생성됨
     const scriptCall = mockWriteFile.mock.calls.find((c: string[]) =>
       c[0].includes("deck-notify.sh"),
     );
-    expect(scriptCall![1]).toContain("/dev/tcp/127.0.0.1/5000");
+    expect(scriptCall![1]).toContain("127.0.0.1:5000");
   });
 
   it("구 포맷 DECK 훅도 제거하고 새 포맷으로 등록한다", async () => {
+    const entry = { type: "command", command: deckCommand };
     mockReadFile.mockResolvedValue(
       JSON.stringify({
-        hooks: {
-          Notification: [{ type: "command", command: curlCommand }],
-        },
+        hooks: { Stop: [entry], Notification: [entry] },
       }),
     );
 
@@ -185,6 +181,7 @@ describe("registerHook", () => {
       c[0].includes("settings.json"),
     );
     const written = JSON.parse(settingsCall![1] as string);
+    expect(written.hooks.Stop).toHaveLength(1);
     expect(written.hooks.Notification).toHaveLength(1);
     expect(written.hooks.Notification[0].hooks[0].command).toContain("deck-notify.sh");
   });

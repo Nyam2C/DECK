@@ -12,7 +12,10 @@ interface PanelProps {
 
 /** 상태별 보더/글로우 클래스 */
 function getStatusClasses(status: PanelStatus, isFocused: boolean): string {
-  if (isFocused && (status === "active" || status === "idle")) {
+  if (status === "idle") {
+    return "border-deck-pink animate-glow-pink";
+  }
+  if (isFocused && status === "active") {
     return "border-deck-cyan animate-glow";
   }
   if (status === "input") {
@@ -209,32 +212,23 @@ export function Panel({ panel, spanClassName }: PanelProps) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* 입력 대기 뱃지 */}
-            {panel.status === "input" && !isFocused && (
-              <span
-                className="text-deck-gold text-xs animate-badge inline-block"
-                title="입력 대기중"
-              >
-                [ ! ]
-              </span>
-            )}
 
             {/* 훅 상태 표시 */}
             {panel.hookConnected === true && (
-              <span className="text-xs" title="훅 연결됨">
-                🔗
+              <span className="text-deck-cyan text-[10px] tracking-wider" title="훅 연결됨">
+                [ HOOK ]
               </span>
             )}
             {panel.hookConnected === false && (
               <span
-                className="text-xs cursor-pointer"
+                className="text-deck-gold text-[10px] tracking-wider cursor-pointer hover:text-deck-gold/80 transition-colors"
                 title="훅 미연결 — 클릭하여 설정"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleRegisterHook();
                 }}
               >
-                ⚠
+                [ HOOK ]
               </span>
             )}
 

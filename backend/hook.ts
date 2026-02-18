@@ -6,13 +6,25 @@ const SETTINGS_PATH = join(homedir(), ".claude", "settings.json");
 const SCRIPT_PATH = join(homedir(), ".claude", "hooks", "deck-notify.sh");
 
 /** DECK 훅 식별 키워드 */
-const DECK_MARKER = "DECK_PANEL_ID";
+const DECK_MARKER = "deck-notify";
 
+/** Stop: 턴 종료 즉시, Notification: 중간 입력 대기 시 */
+const HOOK_EVENTS = ["Stop", "Notification"] as const;
+
+/**
+ * dd로 stdin을 단일 read() 시스콜로 즉시 읽는다.
+ * Claude Code가 개행 없이 파이프를 오래 열어두므로 cat/read 사용 불가.
+ */
 function buildScript(port: number): string {
   return `#!/bin/bash
-cat > /dev/null
-B='{"panelId":"'$DECK_PANEL_ID'","message":"input"}'
-exec 3<>/dev/tcp/127.0.0.1/${port} 2>/dev/null && printf 'POST /hook/notify HTTP/1.0\\r\\nContent-Type: application/json\\r\\nContent-Length: %s\\r\\n\\r\\n%s' "\${#B}" "$B" >&3 && exec 3>&-
+INPUT=$(dd bs=65536 count=1 2>/dev/null)
+[ -n "$INPUT" ] && {
+  printf '{"panelId":"%s","payload":%s}' "$DECK_PANEL_ID" "$INPUT" | \\
+    curl -s --connect-timeout 1 -m 2 \\
+      -X POST http://127.0.0.1:${port}/hook/notify \\
+      -H 'Content-Type: application/json' \\
+      -d @- &>/dev/null
+} &
 `;
 }
 
@@ -23,8 +35,7 @@ async function writeScript(port: number): Promise<void> {
   await chmod(SCRIPT_PATH, 0o755);
 }
 
-// Notification 배열 항목은 구 포맷/새 포맷 모두 올 수 있으므로 느슨하게 정의
-type NotificationEntry = Record<string, unknown>;
+type HookEntry = Record<string, unknown>;
 
 /** settings.json을 안전하게 읽는다. 파일 없으면 빈 객체 반환. */
 async function readSettings(): Promise<Record<string, unknown>> {
@@ -42,39 +53,39 @@ async function writeSettings(settings: Record<string, unknown>): Promise<void> {
   await writeFile(SETTINGS_PATH, JSON.stringify(settings, null, 2) + "\n", "utf-8");
 }
 
-/** Notification 배열을 추출한다. */
-function getNotificationEntries(settings: Record<string, unknown>): NotificationEntry[] {
-  const hooks = settings.hooks as Record<string, unknown> | undefined;
-  if (!hooks) return [];
-  const arr = hooks.Notification;
-  return Array.isArray(arr) ? (arr as NotificationEntry[]) : [];
-}
-
 /** 커맨드 문자열이 DECK 훅인지 확인 */
 function isDeckCommand(command: string): boolean {
-  return command.includes(DECK_MARKER) || command.includes("deck-notify.sh");
+  return command.includes(DECK_MARKER);
 }
 
-/** 항목에 DECK 마커가 있는지 확인 (새 포맷 + 구 포맷 호환) */
-function entryHasDeckHook(entry: NotificationEntry): boolean {
-  // 새 포맷: { hooks: [{ command: "..." }] }
+/** 항목에 DECK 마커가 있는지 확인 */
+function entryHasDeckHook(entry: HookEntry): boolean {
   if (Array.isArray(entry.hooks)) {
     return entry.hooks.some(
-      (h: NotificationEntry) => typeof h.command === "string" && isDeckCommand(h.command),
+      (h: HookEntry) => typeof h.command === "string" && isDeckCommand(h.command),
     );
   }
-  // 구 포맷: { type: "command", command: "..." }
   if (typeof entry.command === "string") {
     return isDeckCommand(entry.command);
   }
   return false;
 }
 
+/** 지정된 이벤트에서 훅 배열과 DECK 존재 여부를 추출 */
+function getEventEntries(
+  hooks: Record<string, unknown>,
+  event: string,
+): { entries: HookEntry[]; hasDeck: boolean } {
+  const entries = Array.isArray(hooks[event]) ? (hooks[event] as HookEntry[]) : [];
+  return { entries, hasDeck: entries.some(entryHasDeckHook) };
+}
+
 /** ~/.claude/settings.json에 DECK 훅이 등록되어 있는지 확인 */
 export async function checkHook(_port: number): Promise<boolean> {
   const settings = await readSettings();
-  const entries = getNotificationEntries(settings);
-  return entries.some(entryHasDeckHook);
+  const hooks = settings.hooks as Record<string, unknown> | undefined;
+  if (!hooks) return false;
+  return HOOK_EVENTS.every((event) => getEventEntries(hooks, event).hasDeck);
 }
 
 /** DECK 훅을 ~/.claude/settings.json에 등록 */
@@ -84,22 +95,28 @@ export async function registerHook(port: number): Promise<void> {
   if (!settings.hooks) settings.hooks = {};
   const hooks = settings.hooks as Record<string, unknown>;
 
-  const existing = Array.isArray(hooks.Notification)
-    ? (hooks.Notification as NotificationEntry[])
-    : [];
-
-  // 기존 DECK 항목 제거 (구 포맷 + 새 포맷 모두, 포트 교체 대응)
-  const filtered = existing.filter((e) => !entryHasDeckHook(e));
+  // 모든 이벤트에서 기존 DECK 항목 제거
+  for (const event of HOOK_EVENTS) {
+    const { entries } = getEventEntries(hooks, event);
+    const filtered = entries.filter((e) => !entryHasDeckHook(e));
+    if (filtered.length > 0) {
+      hooks[event] = filtered;
+    } else {
+      delete hooks[event];
+    }
+  }
 
   // 스크립트 파일 생성/갱신
   await writeScript(port);
 
-  // 새 항목 추가 (matcher + hooks 포맷) — 스크립트 경로를 커맨드로 등록
-  filtered.push({
-    hooks: [{ type: "command", command: SCRIPT_PATH }],
-  });
+  // 모든 이벤트에 훅 등록
+  const hookDef = { hooks: [{ type: "command", command: SCRIPT_PATH }] };
+  for (const event of HOOK_EVENTS) {
+    const arr = Array.isArray(hooks[event]) ? (hooks[event] as HookEntry[]) : [];
+    arr.push({ ...hookDef });
+    hooks[event] = arr;
+  }
 
-  hooks.Notification = filtered;
   await writeSettings(settings);
 }
 
