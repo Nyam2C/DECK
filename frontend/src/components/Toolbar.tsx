@@ -7,39 +7,43 @@ export function Toolbar() {
   const aliveCount = usePanelStore((s) => s.panels.filter((p) => p.status !== "exited").length);
   const addPanel = usePanelStore((s) => s.addPanel);
   const openSettings = useSettingsStore((s) => s.openSettings);
+  const theme = useSettingsStore((s) => s.theme);
   const isMaxPanels = aliveCount >= MAX_PANELS;
+  const isMiku = theme === "miku";
 
   return (
-    <header className="flex items-center justify-between px-5 py-1.5 bg-deck-panel/80 backdrop-blur-sm border-b border-dotted border-deck-border relative z-40 shrink-0">
+    <header className="flex items-center justify-between px-5 py-1.5 min-h-[52px] bg-deck-panel/80 backdrop-blur-sm border-b border-dotted border-deck-border relative z-40 shrink-0">
       {/* 좌측: 로고 */}
       <div className="flex items-center gap-2">
-        <img src="/sprites/miku-idle.gif" alt="" className="miku-sprite h-10 shrink-0" />
+        {isMiku && <img src="/sprites/miku-idle.gif" alt="" className="miku-sprite h-10 shrink-0" />}
         <span className="text-deck-cyan text-xl tracking-wider font-bold">▪ DECK</span>
-        <span className="text-deck-gold text-[10px] animate-sparkle opacity-60">✦</span>
+        {isMiku && <span className="text-deck-gold text-[10px] animate-sparkle opacity-60">✦</span>}
       </div>
 
-      {/* 중앙: 장식 */}
-      <div className="flex items-center gap-2">
-        <span
-          className="text-deck-pink text-[10px] animate-sparkle opacity-40"
-          style={{ animationDelay: ".5s" }}
-        >
-          ♪
-        </span>
-        <span className="text-deck-dim text-xs tracking-[0.3em] hidden sm:inline">
-          · · · · · · · · · · ·
-        </span>
-        <span
-          className="text-deck-cyan text-[10px] animate-sparkle opacity-40"
-          style={{ animationDelay: "1s" }}
-        >
-          ♫
-        </span>
-      </div>
+      {/* 중앙: 장식 (miku 전용) */}
+      {isMiku && (
+        <div className="flex items-center gap-2">
+          <span
+            className="text-deck-pink text-[10px] animate-sparkle opacity-40"
+            style={{ animationDelay: ".5s" }}
+          >
+            ♪
+          </span>
+          <span className="text-deck-dim text-xs tracking-[0.3em] hidden sm:inline">
+            · · · · · · · · · · ·
+          </span>
+          <span
+            className="text-deck-cyan text-[10px] animate-sparkle opacity-40"
+            style={{ animationDelay: "1s" }}
+          >
+            ♫
+          </span>
+        </div>
+      )}
 
       {/* 우측: 버튼 */}
       <div className="flex items-center gap-2">
-        <img src="/sprites/miku-run.gif" alt="" className="miku-sprite h-9 shrink-0 opacity-80" />
+        {isMiku && <img src="/sprites/miku-run.gif" alt="" className="miku-sprite h-9 shrink-0 opacity-80" />}
         <button
           onClick={() => addPanel()}
           disabled={isMaxPanels}

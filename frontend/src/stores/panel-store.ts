@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type { Panel, PanelStatus } from "../types";
 
 const MAX_PANELS = 4;
@@ -18,7 +19,9 @@ interface PanelStore {
   reorderPanels: (fromIndex: number, toIndex: number) => void;
 }
 
-export const usePanelStore = create<PanelStore>((set, get) => ({
+export const usePanelStore = create<PanelStore>()(
+  persist(
+    (set, get) => ({
   panels: [],
   focusedId: null,
   pinnedId: null,
@@ -85,4 +88,29 @@ export const usePanelStore = create<PanelStore>((set, get) => ({
       return { panels };
     });
   },
-}));
+    }),
+    {
+      name: "deck-panels",
+      partialize: (state) => ({
+        panels: state.panels,
+        focusedId: state.focusedId,
+        pinnedId: state.pinnedId,
+      }),
+      merge: (persisted, current) => {
+        const saved = persisted as Partial<PanelStore> | undefined;
+        if (!saved?.panels) return current;
+        return {
+          ...current,
+          panels: saved.panels.map((p) => ({
+            ...p,
+            status: "setup" as const,
+            hookConnected: null,
+            exitCode: undefined,
+          })),
+          focusedId: saved.focusedId ?? null,
+          pinnedId: saved.pinnedId ?? null,
+        };
+      },
+    },
+  ),
+);

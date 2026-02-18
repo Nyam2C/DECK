@@ -99,4 +99,5 @@ describe("usePanelStore", () => {
     const ids = usePanelStore.getState().panels.map((p) => p.id);
     expect(ids).toEqual([id2, id3, id1]);
   });
+
 });

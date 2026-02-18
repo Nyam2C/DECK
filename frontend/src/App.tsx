@@ -13,8 +13,14 @@ import {
 
 export function App() {
   const isSettingsOpen = useSettingsStore((s) => s.isOpen);
+  const theme = useSettingsStore((s) => s.theme);
   const connectionState = useWsState((s) => s.connectionState);
   const wasConnected = useWsState((s) => s.wasConnected);
+
+  // 테마 적용
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   // WebSocket 연결 초기화
   useWebSocketInit();
@@ -124,9 +130,11 @@ export function App() {
     <div className="bg-deck-bg dot-grid-bg text-deck-text font-dot h-screen flex flex-col overflow-hidden select-none">
       <Toolbar />
 
-      {/* 스캔라인 구분선 */}
+      {/* 구분선 */}
       <div className="text-center text-deck-border text-[10px] leading-none py-0.5 tracking-[0.5em] overflow-hidden whitespace-nowrap shrink-0">
-        ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+        {theme === "miku"
+          ? "░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░"
+          : "\u00A0"}
       </div>
 
       <Grid />
