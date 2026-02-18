@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useWsState, onServerMessage, sendMessage } from "../../hooks/use-websocket";
-import type { ServerMessage } from "../../hooks/use-websocket";
 
 describe("use-websocket", () => {
   describe("useWsState", () => {

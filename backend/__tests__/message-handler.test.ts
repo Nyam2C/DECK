@@ -27,7 +27,14 @@ describe("handleMessage", () => {
       send,
     );
 
-    expect(manager.create).toHaveBeenCalledWith("claude", ["--model", "sonnet"], "/tmp", 80, 24, undefined);
+    expect(manager.create).toHaveBeenCalledWith(
+      "claude",
+      ["--model", "sonnet"],
+      "/tmp",
+      80,
+      24,
+      undefined,
+    );
     expect(send).toHaveBeenCalledWith({ type: "created", panelId: "test-id" });
   });
 

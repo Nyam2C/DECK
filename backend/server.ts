@@ -1,4 +1,8 @@
-import { createServer as createHttpServer, type IncomingMessage, type ServerResponse } from "node:http";
+import {
+  createServer as createHttpServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { join, extname } from "node:path";
 import { WebSocketServer, WebSocket } from "ws";
@@ -110,7 +114,11 @@ export function createServer(options: DeckServerOptions) {
 }
 
 /** 정적 파일 서빙 */
-async function serveStatic(pathname: string, staticDir: string, res: ServerResponse): Promise<void> {
+async function serveStatic(
+  pathname: string,
+  staticDir: string,
+  res: ServerResponse,
+): Promise<void> {
   const filePath = pathname === "/" ? "/index.html" : pathname;
   const fullPath = join(staticDir, filePath);
 

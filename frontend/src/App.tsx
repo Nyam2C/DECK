@@ -4,7 +4,12 @@ import { Grid } from "./components/Grid";
 import { Settings } from "./components/Settings";
 import { useSettingsStore } from "./stores/settings-store";
 import { usePanelStore } from "./stores/panel-store";
-import { useWebSocketInit, useWsState, onServerMessage, connectWebSocket } from "./hooks/use-websocket";
+import {
+  useWebSocketInit,
+  useWsState,
+  onServerMessage,
+  connectWebSocket,
+} from "./hooks/use-websocket";
 
 export function App() {
   const isSettingsOpen = useSettingsStore((s) => s.isOpen);
@@ -88,7 +93,9 @@ export function App() {
             <div className="text-deck-pink text-sm">다른 탭에서 DECK에 연결되었습니다</div>
             <div className="text-deck-dim text-xs">동시에 하나의 탭만 사용할 수 있습니다</div>
             <button
-              onClick={() => { connectWebSocket(); }}
+              onClick={() => {
+                connectWebSocket();
+              }}
               className="px-4 py-1.5 text-xs border border-deck-pink text-deck-pink hover:bg-deck-pink/15 transition-colors"
             >
               이 탭에서 다시 연결

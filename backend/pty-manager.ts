@@ -46,7 +46,14 @@ export class PtyManager {
    * cwd: 작업 디렉토리
    * cols, rows: 터미널 초기 크기
    */
-  create(command: string, args: string[], cwd: string, cols: number, rows: number, panelId?: string): string {
+  create(
+    command: string,
+    args: string[],
+    cwd: string,
+    cols: number,
+    rows: number,
+    panelId?: string,
+  ): string {
     if (this.sessions.size >= MAX_SESSIONS) {
       throw new Error(`최대 ${MAX_SESSIONS}개 세션까지 생성 가능`);
     }
