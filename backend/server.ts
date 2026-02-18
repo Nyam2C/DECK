@@ -115,7 +115,7 @@ export function createServer(options: DeckServerOptions) {
     });
   }
 
-  return { server, ptyManager };
+  return { server, wss, ptyManager };
 }
 
 /** 정적 파일 서빙 */

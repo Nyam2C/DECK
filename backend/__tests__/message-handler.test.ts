@@ -148,9 +148,8 @@ describe("handleMessage", () => {
     handleMessage(JSON.stringify({ type: "autocomplete", partial: "/tmp" }), manager, send, 3000);
 
     // autocomplete는 비동기이므로 대기
-    await vi.waitFor(() => {
-      expect(send).toHaveBeenCalledWith(expect.objectContaining({ type: "autocomplete-result" }));
-    });
+    await new Promise((r) => setTimeout(r, 200));
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ type: "autocomplete-result" }));
   });
 
   it("알 수 없는 메시지 타입에 에러 응답을 보낸다", () => {
