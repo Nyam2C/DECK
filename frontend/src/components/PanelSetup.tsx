@@ -63,15 +63,15 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
     });
   }, [panelId, updatePanel]);
 
-  // 자동완성 응답 구독
+  // 자동완성 응답 구독 (이 패널의 응답만 처리)
   useEffect(() => {
     return onServerMessage((msg) => {
-      if (msg.type === "autocomplete-result") {
+      if (msg.type === "autocomplete-result" && msg.panelId === panelId) {
         setCandidates(msg.candidates);
         setShowCandidates(msg.candidates.length > 0);
       }
     });
-  }, []);
+  }, [panelId]);
 
   // 경로 입력 시 디렉토리 자동완성 (debounce 300ms)
   const handlePathChange = useCallback(
@@ -81,7 +81,7 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       if (value.length >= 2) {
         debounceRef.current = setTimeout(() => {
-          sendMessage({ type: "autocomplete", partial: value });
+          sendMessage({ type: "autocomplete", panelId, partial: value });
         }, 300);
       } else {
         setCandidates([]);

@@ -69,7 +69,7 @@ export function handleMessage(raw: string, ptyManager: PtyManager, send: SendFn)
 
     case "autocomplete": {
       autocomplete(msg.partial).then((candidates) => {
-        send({ type: "autocomplete-result", candidates });
+        send({ type: "autocomplete-result", panelId: msg.panelId, candidates });
       });
       break;
     }
