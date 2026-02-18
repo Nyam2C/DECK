@@ -52,6 +52,24 @@ function TerminalView({ panelId }: { panelId: string }) {
   return <div ref={containerRef} className="w-full h-full pl-2" />;
 }
 
+/** 종료 코드별 설명 메시지 */
+function getExitMessage(exitCode: number | undefined): string {
+  switch (exitCode) {
+    case 0:
+      return "세션이 정상 종료되었습니다";
+    case 130:
+      return "세션이 중단되었습니다";
+    case 137:
+      return "세션이 비정상 종료되었습니다";
+    case 143:
+      return "세션이 종료되었습니다";
+    case -1:
+      return "서버 연결이 끊어졌습니다";
+    default:
+      return "세션이 비정상 종료되었습니다";
+  }
+}
+
 /** 종료 뷰 — 종료 코드 + 재시작/닫기 버튼 */
 function ExitedView({ panel }: { panel: PanelType }) {
   const updatePanel = usePanelStore((s) => s.updatePanel);
@@ -70,7 +88,8 @@ function ExitedView({ panel }: { panel: PanelType }) {
 
   return (
     <div className="flex flex-col items-center justify-center h-full gap-3 p-4">
-      <span className="text-deck-dim text-xs">프로세스 종료 (코드: {panel.exitCode ?? "?"})</span>
+      <span className="text-deck-dim text-xs">{getExitMessage(panel.exitCode)}</span>
+      <span className="text-deck-border text-[10px]">코드: {panel.exitCode ?? "?"}</span>
       <div className="flex gap-2">
         <button
           onClick={handleRestart}
@@ -182,7 +201,7 @@ export function Panel({ panel, spanClassName }: PanelProps) {
 
           <div className="flex items-center gap-2 shrink-0">
             {/* 입력 대기 뱃지 */}
-            {panel.status === "input" && (
+            {panel.status === "input" && !isFocused && (
               <span
                 className="text-deck-gold text-xs animate-badge inline-block"
                 title="입력 대기중"

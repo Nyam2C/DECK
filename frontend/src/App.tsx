@@ -63,13 +63,31 @@ export function App() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
+  // 서버 연결 끊김 → 모든 running 패널 exited 전환
+  useEffect(() => {
+    return useWsState.subscribe((state, prev) => {
+      if (prev.wasConnected && state.connectionState === "disconnected") {
+        const { panels, updatePanel } = usePanelStore.getState();
+        for (const p of panels) {
+          if (p.status === "active" || p.status === "idle" || p.status === "input") {
+            updatePanel(p.id, { status: "exited", exitCode: -1 });
+          }
+        }
+      }
+    });
+  }, []);
+
   // 탭 타이틀 동적 업데이트
   useEffect(() => {
     return usePanelStore.subscribe((state) => {
-      const count = state.panels.filter(
-        (p) => p.status === "active" || p.status === "idle" || p.status === "input",
+      const active = state.panels.filter(
+        (p) => p.status === "active" || p.status === "idle",
       ).length;
-      document.title = count > 0 ? `DECK (${count})` : "DECK";
+      const waiting = state.panels.filter((p) => p.status === "input").length;
+      const parts: string[] = [];
+      if (active > 0) parts.push(`${active} active`);
+      if (waiting > 0) parts.push(`${waiting} waiting`);
+      document.title = parts.length > 0 ? `DECK — ${parts.join(", ")}` : "DECK";
     });
   }, []);
 

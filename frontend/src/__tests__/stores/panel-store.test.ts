@@ -65,6 +65,32 @@ describe("usePanelStore", () => {
     expect(panel?.status).toBe("active");
   });
 
+  it("setStatus로 패널 상태를 변경한다", () => {
+    const id = usePanelStore.getState().addPanel()!;
+    usePanelStore.getState().updatePanel(id, { status: "active" });
+    usePanelStore.getState().setStatus(id, "idle");
+    const panel = usePanelStore.getState().panels.find((p) => p.id === id);
+    expect(panel?.status).toBe("idle");
+  });
+
+  it("exited 전환 시 exitCode가 저장된다", () => {
+    const id = usePanelStore.getState().addPanel()!;
+    usePanelStore.getState().updatePanel(id, { status: "active" });
+    usePanelStore.getState().updatePanel(id, { status: "exited", exitCode: 137 });
+    const panel = usePanelStore.getState().panels.find((p) => p.id === id);
+    expect(panel?.status).toBe("exited");
+    expect(panel?.exitCode).toBe(137);
+  });
+
+  it("재시작 시 exited → active, exitCode 제거", () => {
+    const id = usePanelStore.getState().addPanel()!;
+    usePanelStore.getState().updatePanel(id, { status: "exited", exitCode: 1 });
+    usePanelStore.getState().updatePanel(id, { status: "active", exitCode: undefined });
+    const panel = usePanelStore.getState().panels.find((p) => p.id === id);
+    expect(panel?.status).toBe("active");
+    expect(panel?.exitCode).toBeUndefined();
+  });
+
   it("reorderPanels로 순서를 변경한다", () => {
     const id1 = usePanelStore.getState().addPanel()!;
     const id2 = usePanelStore.getState().addPanel()!;
