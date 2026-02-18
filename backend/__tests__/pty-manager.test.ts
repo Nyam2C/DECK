@@ -47,13 +47,16 @@ describe("PtyManager", () => {
     manager.killAll();
   });
 
-  it("PTY를 생성하고 onData 콜백이 호출된다", () => {
+  it("PTY를 생성하고 onData 콜백이 호출된다", async () => {
     const id = manager.create("echo", ["hello"], "/tmp", 80, 24);
     expect(id).toBeTruthy();
     expect(manager.has(id)).toBe(true);
 
     // 모킹된 PTY에서 데이터 이벤트 발생
     mockPtyInstance._emit("data", "hello\r\n");
+
+    // 배칭(16ms) 대기 후 콜백 확인
+    await new Promise((r) => setTimeout(r, 20));
     expect(onData).toHaveBeenCalledWith(id, "hello\r\n");
   });
 

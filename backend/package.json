@@ -4,15 +4,18 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "bun run index.ts",
-    "dev": "bun --watch run index.ts",
-    "build": "bun build index.ts --outdir dist --target bun"
+    "start": "tsx index.ts",
+    "dev": "tsx watch index.ts",
+    "build": "echo 'backend: tsx 런타임 — 빌드 불필요'"
   },
   "dependencies": {
-    "node-pty": "^1.1.0"
+    "node-pty": "^1.1.0",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
-    "bun-types": "^1.2.0",
+    "@types/node": "^25.2.3",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.0"
   }
 }

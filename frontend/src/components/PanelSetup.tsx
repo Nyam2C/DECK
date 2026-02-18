@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePanelStore } from "../stores/panel-store";
+import { sendMessage, onServerMessage } from "../hooks/use-websocket";
 
 interface PanelSetupProps {
   panelId: string;
@@ -18,9 +19,22 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
   const [sessionMode, setSessionMode] = useState<SessionMode>("new");
   const [permissionMode, setPermissionMode] = useState<PermissionMode>("plan");
   const [skipPermissions, setSkipPermissions] = useState(false);
-  const [model, setModel] = useState<ModelType>("sonnet");
+  const [model, setModel] = useState<ModelType>("opus");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [customCommand, setCustomCommand] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
+
+  // 서버 응답 구독: error → setup으로 롤백
+  useEffect(() => {
+    return onServerMessage((msg) => {
+      if (msg.type === "error" && msg.panelId === panelId) {
+        setStarting(false);
+        setError(msg.message);
+        updatePanel(panelId, { status: "setup" });
+      }
+    });
+  }, [panelId, updatePanel]);
 
   // Claude Code 명령어 조합
   function buildCommand(): string {
@@ -32,7 +46,6 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
     if (skipPermissions) parts.push("--dangerously-skip-permissions");
     if (sessionMode === "continue") parts.push("-c");
     if (sessionMode === "resume") parts.push("-r");
-    if (path) parts.push(path);
     return parts.join(" ");
   }
 
@@ -44,13 +57,18 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
         ? buildCommand().replace(/^claude\s*/, "")
         : customCommand.split(/\s+/).slice(1).join(" ");
 
-    updatePanel(panelId, {
-      name,
-      cli,
-      path,
-      options,
-      status: "active", // Phase 4에서 WebSocket create 메시지 전송 후 전환
-    });
+    setError(null);
+    setStarting(true);
+
+    const sent = sendMessage({ type: "create", panelId, cli, path, options });
+    if (!sent) {
+      setStarting(false);
+      setError("서버에 연결되지 않았습니다");
+      return;
+    }
+
+    // 즉시 active 전환 → xterm.js 마운트와 PTY 생성을 병렬화
+    updatePanel(panelId, { name, cli, path, options, status: "active" });
   }
 
   return (
@@ -165,11 +183,11 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
                 onChange={(e) => setModel(e.target.value as ModelType)}
                 className="bg-deck-bg border border-dashed border-deck-border px-2 py-1 text-deck-text cursor-pointer hover:border-deck-cyan/50"
               >
-                <option value="sonnet">sonnet</option>
                 <option value="opus">opus</option>
+                <option value="sonnet">sonnet</option>
                 <option value="haiku">haiku</option>
               </select>
-              <span className="text-deck-dim">(sonnet / opus / haiku)</span>
+              <span className="text-deck-dim">(opus / sonnet / haiku)</span>
             </div>
           </div>
 
@@ -212,14 +230,21 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
         <span className="text-deck-dim">▸</span> {buildCommand()}
       </div>
 
+      {/* 에러 메시지 */}
+      {error && (
+        <div className="text-xs text-red-400 bg-red-400/10 border border-red-400/30 px-2 py-1.5">
+          {error}
+        </div>
+      )}
+
       {/* 시작 버튼 */}
       <div className="flex justify-center pt-1">
         <button
           onClick={handleStart}
-          disabled={!path && cliType === "claude"}
+          disabled={starting || (!path && cliType === "claude")}
           className="bg-deck-cyan text-deck-bg font-bold px-8 py-2 text-sm hover:shadow-[0_0_16px_#39C5BB] transition-shadow cursor-pointer tracking-wide disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          시작
+          {starting ? "연결 중..." : "시작"}
         </button>
       </div>
     </div>
