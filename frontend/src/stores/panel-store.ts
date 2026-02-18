@@ -25,7 +25,8 @@ export const usePanelStore = create<PanelStore>((set, get) => ({
 
   addPanel: () => {
     const { panels } = get();
-    if (panels.length >= MAX_PANELS) return null;
+    const alive = panels.filter((p) => p.status !== "exited").length;
+    if (alive >= MAX_PANELS) return null;
 
     const id = crypto.randomUUID();
     const newPanel: Panel = {

@@ -5,6 +5,7 @@ type SettingsTab = "general" | "shortcuts" | "presets";
 
 export function Settings() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
+  const [saved, setSaved] = useState(false);
   const closeSettings = useSettingsStore((s) => s.closeSettings);
 
   // ESC 키로 닫기
@@ -70,8 +71,14 @@ export function Settings() {
 
         {/* 푸터 */}
         <div className="flex items-center justify-center gap-4 px-4 py-3 border-t-2 border-deck-cyan/20 bg-deck-bg/40">
-          <button className="bg-deck-cyan text-deck-bg font-bold px-6 py-1.5 text-sm hover:shadow-[0_0_16px_#39C5BB] transition-shadow cursor-pointer tracking-wide">
-            ▪ 저장
+          <button
+            onClick={() => {
+              setSaved(true);
+              setTimeout(() => setSaved(false), 1500);
+            }}
+            className="bg-deck-cyan text-deck-bg font-bold px-6 py-1.5 text-sm hover:shadow-[0_0_16px_#39C5BB] transition-shadow cursor-pointer tracking-wide"
+          >
+            {saved ? "\u2714 저장됨" : "\u25AA 저장"}
           </button>
           <button
             onClick={closeSettings}
@@ -86,7 +93,7 @@ export function Settings() {
 }
 
 function GeneralTab() {
-  const { fontSize, updateSettings } = useSettingsStore();
+  const { fontSize, defaultPath, updateSettings } = useSettingsStore();
   const fontSizes = [12, 14, 16, 18, 20];
 
   return (
@@ -107,6 +114,19 @@ function GeneralTab() {
               {size}
             </span>
           ))}
+        </div>
+      </div>
+      <div>
+        <div className="text-deck-dim mb-2">▪ 기본 경로</div>
+        <input
+          type="text"
+          value={defaultPath}
+          onChange={(e) => updateSettings({ defaultPath: e.target.value })}
+          placeholder="~/project"
+          className="w-full bg-deck-bg border border-dashed border-deck-border px-2 py-1.5 text-deck-text font-term text-xs focus:border-deck-cyan/50 outline-none"
+        />
+        <div className="text-deck-dim text-[10px] mt-1 pl-1">
+          새 패널의 경로 초기값 (비어있으면 ~/project)
         </div>
       </div>
       <div className="text-deck-border text-center tracking-[0.3em] text-[10px]">

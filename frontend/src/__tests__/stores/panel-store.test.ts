@@ -23,6 +23,19 @@ describe("usePanelStore", () => {
     expect(usePanelStore.getState().panels).toHaveLength(4);
   });
 
+  it("exited 패널은 최대 개수에서 제외된다", () => {
+    for (let i = 0; i < 4; i++) {
+      usePanelStore.getState().addPanel();
+    }
+    // 하나를 exited로 변경
+    const exitedId = usePanelStore.getState().panels[0].id;
+    usePanelStore.getState().updatePanel(exitedId, { status: "exited" });
+    // exited 패널이 있으므로 새 패널 추가 가능
+    const newId = usePanelStore.getState().addPanel();
+    expect(newId).toBeTruthy();
+    expect(usePanelStore.getState().panels).toHaveLength(5);
+  });
+
   it("removePanel로 패널을 제거한다", () => {
     const id = usePanelStore.getState().addPanel()!;
     usePanelStore.getState().removePanel(id);

@@ -7,7 +7,7 @@ export type ClientMessage =
   | { type: "input"; panelId: string; data: string }
   | { type: "resize"; panelId: string; cols: number; rows: number }
   | { type: "kill"; panelId: string }
-  | { type: "autocomplete"; partial: string };
+  | { type: "autocomplete"; panelId: string; partial: string };
 
 export type PanelState = "active" | "idle" | "input";
 
@@ -15,7 +15,7 @@ export type ServerMessage =
   | { type: "created"; panelId: string }
   | { type: "output"; panelId: string; data: string }
   | { type: "exited"; panelId: string; exitCode: number }
-  | { type: "autocomplete-result"; candidates: string[] }
+  | { type: "autocomplete-result"; panelId: string; candidates: string[] }
   | { type: "status"; panelId: string; state: PanelState }
   | { type: "error"; panelId: string; message: string }
   | { type: "hook-notify"; panelId: string; message: string }
@@ -78,14 +78,17 @@ export function connectWebSocket(): void {
   shouldConnect = true;
   useWsState.setState({ connectionState: "connecting" });
 
-  ws = new WebSocket(getWsUrl());
+  const socket = new WebSocket(getWsUrl());
+  ws = socket;
 
-  ws.onopen = () => {
+  socket.onopen = () => {
+    if (ws !== socket) return;
     reconnectCount = 0;
     useWsState.setState({ connectionState: "connected", wasConnected: true });
   };
 
-  ws.onmessage = (event) => {
+  socket.onmessage = (event) => {
+    if (ws !== socket) return;
     try {
       const msg = JSON.parse(event.data as string) as ServerMessage;
       dispatch(msg);
@@ -94,7 +97,10 @@ export function connectWebSocket(): void {
     }
   };
 
-  ws.onclose = (event) => {
+  socket.onclose = (event) => {
+    // 이미 새 연결로 교체된 경우 — 이 소켓의 이벤트는 무시
+    if (ws !== socket) return;
+
     ws = null;
 
     // 다른 탭에서 연결되어 교체된 경우 — 재연결하지 않음
@@ -112,7 +118,7 @@ export function connectWebSocket(): void {
     }
   };
 
-  ws.onerror = () => {
+  socket.onerror = () => {
     // onclose에서 재연결 처리
   };
 }

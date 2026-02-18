@@ -1,29 +1,60 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { usePanelStore } from "../stores/panel-store";
+import { useSettingsStore } from "../stores/settings-store";
 import { sendMessage, onServerMessage } from "../hooks/use-websocket";
+import { getProvider, getProviderList } from "../services/cli-provider";
+import type { OptionDef, CLIProvider } from "../services/cli-provider";
 
 interface PanelSetupProps {
   panelId: string;
 }
 
-type CliType = "claude" | "custom";
-type SessionMode = "new" | "continue" | "resume";
-type PermissionMode = "plan" | "safe" | "turbo";
-type ModelType = "sonnet" | "opus" | "haiku";
+type CliKey = "claude" | "custom";
+
+/** 프로바이더의 defaultValue로 초기 상태를 구성한다. */
+function buildDefaults(provider: CLIProvider): Record<string, unknown> {
+  const state: Record<string, unknown> = {};
+  for (const opt of provider.options) {
+    state[opt.key] = opt.defaultValue;
+  }
+  return state;
+}
 
 export function PanelSetup({ panelId }: PanelSetupProps) {
   const updatePanel = usePanelStore((s) => s.updatePanel);
+  const defaultPath = useSettingsStore((s) => s.defaultPath);
 
-  const [cliType, setCliType] = useState<CliType>("claude");
-  const [path, setPath] = useState("");
-  const [sessionMode, setSessionMode] = useState<SessionMode>("new");
-  const [permissionMode, setPermissionMode] = useState<PermissionMode>("plan");
-  const [skipPermissions, setSkipPermissions] = useState(false);
-  const [model, setModel] = useState<ModelType>("opus");
+  const [cliKey, setCliKey] = useState<CliKey>("claude");
+  const [path, setPath] = useState(() => defaultPath);
+  const [formState, setFormState] = useState<Record<string, unknown>>(() =>
+    buildDefaults(getProvider("claude")),
+  );
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [customCommand, setCustomCommand] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+
+  // 디렉토리 자동완성
+  const [candidates, setCandidates] = useState<string[]>([]);
+  const [showCandidates, setShowCandidates] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pathInputRef = useRef<HTMLInputElement>(null);
+  const candidateListRef = useRef<HTMLDivElement>(null);
+
+  const provider = getProvider(cliKey);
+
+  // CLI 탭 전환 시 폼 상태 초기화
+  function switchCli(key: CliKey) {
+    setCliKey(key);
+    setFormState(buildDefaults(getProvider(key)));
+    setShowAdvanced(false);
+    setError(null);
+  }
+
+  // 폼 필드 업데이트
+  function setField(key: string, value: unknown) {
+    setFormState((prev) => ({ ...prev, [key]: value }));
+  }
 
   // 서버 응답 구독: error → setup으로 롤백
   useEffect(() => {
@@ -36,198 +67,312 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
     });
   }, [panelId, updatePanel]);
 
-  // Claude Code 명령어 조합
-  function buildCommand(): string {
-    if (cliType === "custom") return customCommand;
+  // 자동완성 응답 구독 (이 패널의 응답만 처리)
+  useEffect(() => {
+    return onServerMessage((msg) => {
+      if (msg.type === "autocomplete-result" && msg.panelId === panelId) {
+        setCandidates(msg.candidates);
+        setShowCandidates(msg.candidates.length > 0);
+        setSelectedIndex(-1);
+      }
+    });
+  }, [panelId]);
 
-    const parts = ["claude"];
-    parts.push("--model", model);
-    parts.push("--permission-mode", permissionMode);
-    if (skipPermissions) parts.push("--dangerously-skip-permissions");
-    if (sessionMode === "continue") parts.push("-c");
-    if (sessionMode === "resume") parts.push("-r");
-    return parts.join(" ");
+  // 경로 입력 시 디렉토리 자동완성 (debounce 300ms)
+  const handlePathChange = useCallback((value: string) => {
+    setPath(value);
+    setError(null);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (value.length >= 2) {
+      debounceRef.current = setTimeout(() => {
+        sendMessage({ type: "autocomplete", panelId, partial: value });
+      }, 300);
+    } else {
+      setCandidates([]);
+      setShowCandidates(false);
+    }
+  }, []);
+
+  // 자동완성 후보 선택 → 해당 폴더 내부를 다시 자동완성
+  function selectCandidate(value: string) {
+    const withSlash = value.endsWith("/") ? value : value + "/";
+    setPath(withSlash);
+    setSelectedIndex(-1);
+    sendMessage({ type: "autocomplete", panelId, partial: withSlash });
+  }
+
+  // 선택된 항목으로 스크롤
+  function scrollToSelected(index: number) {
+    const list = candidateListRef.current;
+    if (!list || index < 0) return;
+    const item = list.children[index] as HTMLElement | undefined;
+    item?.scrollIntoView({ block: "nearest" });
+  }
+
+  // 경로 입력 키보드 핸들러
+  function handlePathKeyDown(e: React.KeyboardEvent) {
+    if (!showCandidates || candidates.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const next = selectedIndex < candidates.length - 1 ? selectedIndex + 1 : 0;
+      setSelectedIndex(next);
+      scrollToSelected(next);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const next = selectedIndex > 0 ? selectedIndex - 1 : candidates.length - 1;
+      setSelectedIndex(next);
+      scrollToSelected(next);
+    } else if (e.key === "Enter" && selectedIndex >= 0) {
+      e.preventDefault();
+      selectCandidate(candidates[selectedIndex]);
+    } else if (e.key === "Escape") {
+      setShowCandidates(false);
+      setSelectedIndex(-1);
+    }
+  }
+
+  // 명령어 미리보기 조합
+  function previewCommand(): string {
+    const cmd = provider.buildCommand(formState);
+    if (path) return `${cmd} ${path}`;
+    return cmd;
+  }
+
+  // 유효성 검증
+  function validate(): string | null {
+    if (!path.trim()) return "경로를 입력하세요";
+    if (cliKey === "custom") {
+      const cmd = (formState.command as string) || "";
+      if (!cmd.trim()) return "명령어를 입력하세요";
+    }
+    return null;
   }
 
   function handleStart() {
-    const name = path ? path.split("/").pop() || "새 패널" : "새 패널";
-    const cli = cliType === "claude" ? "claude" : customCommand.split(/\s+/)[0] || "";
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    const trimmedPath = path.trim();
+    const name = trimmedPath.split("/").pop() || "새 패널";
+    const cli =
+      cliKey === "claude" ? "claude" : (formState.command as string).split(/\s+/)[0] || "";
+    const cmd = provider.buildCommand(formState);
     const options =
-      cliType === "claude"
-        ? buildCommand().replace(/^claude\s*/, "")
-        : customCommand.split(/\s+/).slice(1).join(" ");
+      cliKey === "claude" ? cmd.replace(/^claude\s*/, "") : cmd.split(/\s+/).slice(1).join(" ");
 
     setError(null);
     setStarting(true);
 
-    const sent = sendMessage({ type: "create", panelId, cli, path, options });
+    const sent = sendMessage({ type: "create", panelId, cli, path: trimmedPath, options });
     if (!sent) {
       setStarting(false);
       setError("서버에 연결되지 않았습니다");
       return;
     }
 
-    // 즉시 active 전환 → xterm.js 마운트와 PTY 생성을 병렬화
-    updatePanel(panelId, { name, cli, path, options, status: "active" });
+    updatePanel(panelId, { name, cli, path: trimmedPath, options, status: "active" });
   }
+
+  // 옵션 렌더링
+  function renderOption(opt: OptionDef) {
+    const value = formState[opt.key];
+
+    switch (opt.type) {
+      case "radio":
+        return (
+          <div key={opt.key}>
+            <div className="text-deck-dim mb-1">
+              {"\u25AA"} {opt.label}{" "}
+              <span className="text-deck-border tracking-[0.2em]">{"\u00B7".repeat(21)}</span>
+            </div>
+            <div className="space-y-1 pl-2">
+              {opt.choices!.map((c) => (
+                <label
+                  key={c.value}
+                  className={`flex items-center gap-2 cursor-pointer transition-colors ${
+                    value === c.value ? "text-deck-cyan" : "text-deck-dim hover:text-deck-cyan"
+                  }`}
+                  onClick={() => setField(opt.key, c.value)}
+                >
+                  <span>{value === c.value ? "\u25C6" : "\u25C7"}</span>
+                  {c.label}
+                </label>
+              ))}
+            </div>
+          </div>
+        );
+
+      case "dropdown":
+        return (
+          <div key={opt.key}>
+            <div className="text-deck-dim mb-1">
+              {"\u25AA"} {opt.label}{" "}
+              <span className="text-deck-border tracking-[0.2em]">{"\u00B7".repeat(21)}</span>
+            </div>
+            <div className="pl-2 flex items-center gap-2">
+              <select
+                value={value as string}
+                onChange={(e) => setField(opt.key, e.target.value)}
+                className="bg-deck-bg border border-dashed border-deck-border px-2 py-1 text-deck-text cursor-pointer hover:border-deck-cyan/50"
+              >
+                {opt.choices!.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+              <span className="text-deck-dim">
+                ({opt.choices!.map((c) => c.label).join(" / ")})
+              </span>
+            </div>
+          </div>
+        );
+
+      case "checkbox":
+        return (
+          <label
+            key={opt.key}
+            className={`pl-2 flex items-center gap-2 cursor-pointer transition-colors ${
+              value ? "text-deck-gold" : "text-deck-dim hover:text-deck-gold"
+            }`}
+            onClick={() => setField(opt.key, !value)}
+          >
+            <span>{value ? "\u25C6" : "\u25C7"}</span>
+            {opt.label}
+          </label>
+        );
+
+      case "text":
+        return (
+          <div key={opt.key}>
+            <div className="text-deck-dim mb-1">
+              {"\u25AA"} {opt.label}
+            </div>
+            <input
+              type="text"
+              value={(value as string) || ""}
+              onChange={(e) => setField(opt.key, e.target.value)}
+              placeholder={opt.placeholder}
+              className="w-full bg-deck-bg border border-dashed border-deck-border px-2 py-1.5 text-deck-text font-term text-xs focus:border-deck-cyan/50 outline-none"
+            />
+          </div>
+        );
+
+      case "textarea":
+        return (
+          <div key={opt.key}>
+            <div className="text-deck-dim mb-1">
+              {"\u25AA"} {opt.label}
+            </div>
+            <textarea
+              value={(value as string) || ""}
+              onChange={(e) => setField(opt.key, e.target.value)}
+              placeholder={opt.placeholder}
+              rows={3}
+              className="w-full bg-deck-bg border border-dashed border-deck-border px-2 py-1.5 text-deck-text font-term text-xs focus:border-deck-cyan/50 outline-none resize-y"
+            />
+          </div>
+        );
+    }
+  }
+
+  const basicOptions = provider.options.filter((o) => o.group === "basic");
+  const advancedOptions = provider.options.filter((o) => o.group === "advanced");
+  const providerList = getProviderList();
 
   return (
     <div className="p-3 text-xs leading-relaxed space-y-3">
       {/* CLI 탭 */}
       <div className="flex gap-0">
-        <button
-          onClick={() => setCliType("claude")}
-          className={`px-3 py-1.5 text-xs border border-r-0 ${
-            cliType === "claude"
-              ? "bg-deck-cyan/15 text-deck-cyan border-deck-cyan/40"
-              : "bg-deck-bg text-deck-dim border-dashed border-deck-border"
-          }`}
-        >
-          Claude Code
-        </button>
-        <button
-          onClick={() => setCliType("custom")}
-          className={`px-3 py-1.5 text-xs border ${
-            cliType === "custom"
-              ? "bg-deck-cyan/15 text-deck-cyan border-deck-cyan/40"
-              : "bg-deck-bg text-deck-dim border-dashed border-deck-border"
-          }`}
-        >
-          커스텀
-        </button>
+        {providerList.map((p, i) => {
+          const key = p.command === "claude" ? "claude" : "custom";
+          const isLast = i === providerList.length - 1;
+          return (
+            <button
+              key={key}
+              onClick={() => switchCli(key as CliKey)}
+              className={`px-3 py-1.5 text-xs border ${!isLast ? "border-r-0" : ""} ${
+                cliKey === key
+                  ? "bg-deck-cyan/15 text-deck-cyan border-deck-cyan/40"
+                  : "bg-deck-bg text-deck-dim border-dashed border-deck-border"
+              }`}
+            >
+              {p.name}
+            </button>
+          );
+        })}
       </div>
 
-      {/* 경로 입력 */}
-      <div>
-        <div className="text-deck-dim mb-1">▪ 경로</div>
+      {/* 경로 입력 + 자동완성 */}
+      <div className="relative">
+        <div className="text-deck-dim mb-1">{"\u25AA"} 경로</div>
         <input
+          ref={pathInputRef}
           type="text"
           value={path}
-          onChange={(e) => setPath(e.target.value)}
+          onChange={(e) => handlePathChange(e.target.value)}
+          onKeyDown={handlePathKeyDown}
+          onBlur={() => setTimeout(() => setShowCandidates(false), 150)}
           placeholder="~/project"
           className="w-full bg-deck-bg border border-dashed border-deck-border px-2 py-1.5 text-deck-text font-term text-xs focus:border-deck-cyan/50 outline-none"
         />
-        {/* 자동완성 드롭다운은 Phase 4에서 WebSocket 연동 시 구현 */}
+        {showCandidates && candidates.length > 0 && (
+          <div
+            ref={candidateListRef}
+            className="absolute z-10 left-0 right-0 mt-0.5 bg-deck-bg border border-deck-border max-h-32 overflow-y-auto"
+          >
+            {candidates.map((c, i) => (
+              <button
+                key={c}
+                className={`block w-full text-left px-2 py-1 text-xs font-term ${
+                  i === selectedIndex
+                    ? "bg-deck-cyan/15 text-deck-cyan"
+                    : "text-deck-text hover:bg-deck-cyan/15 hover:text-deck-cyan"
+                }`}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  selectCandidate(c);
+                }}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {cliType === "claude" ? (
-        <>
-          {/* 세션 모드 */}
-          <div>
-            <div className="text-deck-dim mb-1">
-              ▪ 세션{" "}
-              <span className="text-deck-border tracking-[0.2em]">·····················</span>
-            </div>
-            <div className="space-y-1 pl-2">
-              {(
-                [
-                  ["new", "새 세션"],
-                  ["continue", "이전 세션 이어하기 (-c)"],
-                  ["resume", "특정 세션 선택 (-r)"],
-                ] as const
-              ).map(([value, label]) => (
-                <label
-                  key={value}
-                  className={`flex items-center gap-2 cursor-pointer transition-colors ${
-                    sessionMode === value ? "text-deck-cyan" : "text-deck-dim hover:text-deck-cyan"
-                  }`}
-                  onClick={() => setSessionMode(value)}
-                >
-                  <span className={sessionMode === value ? "text-deck-cyan" : ""}>
-                    {sessionMode === value ? "◆" : "◇"}
-                  </span>
-                  {label}
-                </label>
-              ))}
-            </div>
-          </div>
+      {/* 기본 옵션 */}
+      {basicOptions.map(renderOption)}
 
-          {/* 권한 모드 */}
-          <div>
-            <div className="text-deck-dim mb-1">
-              ▪ 권한{" "}
-              <span className="text-deck-border tracking-[0.2em]">·····················</span>
-            </div>
-            <div className="pl-2 flex items-center gap-2">
-              <select
-                value={permissionMode}
-                onChange={(e) => setPermissionMode(e.target.value as PermissionMode)}
-                className="bg-deck-bg border border-dashed border-deck-border px-2 py-1 text-deck-text cursor-pointer hover:border-deck-cyan/50"
-              >
-                <option value="plan">plan</option>
-                <option value="safe">safe</option>
-                <option value="turbo">turbo</option>
-              </select>
-              <span className="text-deck-dim">(plan / safe / turbo)</span>
-            </div>
-            <label
-              className={`pl-2 mt-1 flex items-center gap-2 cursor-pointer transition-colors ${
-                skipPermissions ? "text-deck-gold" : "text-deck-dim hover:text-deck-gold"
-              }`}
-              onClick={() => setSkipPermissions(!skipPermissions)}
-            >
-              <span>{skipPermissions ? "◆" : "◇"}</span>
-              --dangerously-skip-permissions
-            </label>
-          </div>
-
-          {/* 모델 */}
-          <div>
-            <div className="text-deck-dim mb-1">
-              ▪ 모델{" "}
-              <span className="text-deck-border tracking-[0.2em]">·····················</span>
-            </div>
-            <div className="pl-2 flex items-center gap-2">
-              <select
-                value={model}
-                onChange={(e) => setModel(e.target.value as ModelType)}
-                className="bg-deck-bg border border-dashed border-deck-border px-2 py-1 text-deck-text cursor-pointer hover:border-deck-cyan/50"
-              >
-                <option value="opus">opus</option>
-                <option value="sonnet">sonnet</option>
-                <option value="haiku">haiku</option>
-              </select>
-              <span className="text-deck-dim">(opus / sonnet / haiku)</span>
-            </div>
-          </div>
-
-          {/* 추가 옵션 */}
-          <div>
-            <button
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="text-deck-dim hover:text-deck-cyan transition-colors cursor-pointer text-xs"
-            >
-              {showAdvanced ? "▾" : "▸"} 추가 옵션
-            </button>
-            {showAdvanced && (
-              <div className="mt-2 pl-2 space-y-2 border-l border-dotted border-deck-border">
-                <div className="text-deck-dim">(추가 옵션 필드는 Phase 3+ 에서 구현)</div>
-              </div>
-            )}
-          </div>
-        </>
-      ) : (
-        /* 커스텀 명령어 */
+      {/* 고급 옵션 (있을 때만) */}
+      {advancedOptions.length > 0 && (
         <div>
-          <div className="text-deck-dim mb-1">▪ 명령어</div>
-          <input
-            type="text"
-            value={customCommand}
-            onChange={(e) => setCustomCommand(e.target.value)}
-            placeholder="aider --model gpt-4o"
-            className="w-full bg-deck-bg border border-dashed border-deck-border px-2 py-1.5 text-deck-text font-term text-xs focus:border-deck-cyan/50 outline-none"
-          />
+          <button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="text-deck-dim hover:text-deck-cyan transition-colors cursor-pointer text-xs"
+          >
+            {showAdvanced ? "\u25BE" : "\u25B8"} 추가 옵션
+          </button>
+          {showAdvanced && (
+            <div className="mt-2 pl-2 space-y-2 border-l border-dotted border-deck-border">
+              {advancedOptions.map(renderOption)}
+            </div>
+          )}
         </div>
       )}
 
       {/* 구분선 */}
       <div className="text-deck-border text-center tracking-[0.3em] text-[10px]">
-        · · · · · · · · · · · · · · · · · · · · · · · ·
+        {"\u00B7 ".repeat(24).trim()}
       </div>
 
       {/* 명령어 미리보기 */}
       <div className="font-term text-deck-cyan bg-deck-bg/60 px-2 py-1.5 border-l-2 border-deck-cyan">
-        <span className="text-deck-dim">▸</span> {buildCommand()}
+        <span className="text-deck-dim">{"\u25B8"}</span> {previewCommand()}
       </div>
 
       {/* 에러 메시지 */}
@@ -241,7 +386,7 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
       <div className="flex justify-center pt-1">
         <button
           onClick={handleStart}
-          disabled={starting || (!path && cliType === "claude")}
+          disabled={starting}
           className="bg-deck-cyan text-deck-bg font-bold px-8 py-2 text-sm hover:shadow-[0_0_16px_#39C5BB] transition-shadow cursor-pointer tracking-wide disabled:opacity-30 disabled:cursor-not-allowed"
         >
           {starting ? "연결 중..." : "시작"}
