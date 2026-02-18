@@ -25,16 +25,13 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
 
-  // 서버 응답 구독: created → 상태 전환, error → 에러 표시
+  // 서버 응답 구독: error → setup으로 롤백
   useEffect(() => {
     return onServerMessage((msg) => {
-      if (msg.type === "created" && msg.panelId === panelId) {
-        setStarting(false);
-        updatePanel(panelId, { status: "active" });
-      }
       if (msg.type === "error" && msg.panelId === panelId) {
         setStarting(false);
         setError(msg.message);
+        updatePanel(panelId, { status: "setup" });
       }
     });
   }, [panelId, updatePanel]);
@@ -60,9 +57,6 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
         ? buildCommand().replace(/^claude\s*/, "")
         : customCommand.split(/\s+/).slice(1).join(" ");
 
-    // 패널 메타데이터 저장 (상태는 created 응답 시 전환)
-    updatePanel(panelId, { name, cli, path, options });
-
     setError(null);
     setStarting(true);
 
@@ -70,7 +64,11 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
     if (!sent) {
       setStarting(false);
       setError("서버에 연결되지 않았습니다");
+      return;
     }
+
+    // 즉시 active 전환 → xterm.js 마운트와 PTY 생성을 병렬화
+    updatePanel(panelId, { name, cli, path, options, status: "active" });
   }
 
   return (
