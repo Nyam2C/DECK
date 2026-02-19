@@ -83,7 +83,7 @@ export async function handleMessage(
         if (msg.cli === "claude") {
           checkHook(port).then((connected) => {
             send({ type: "hook-status", panelId, connected });
-          });
+          }).catch((e) => console.error("[DECK] 훅 확인 실패:", e));
         }
       } catch (e) {
         send({
@@ -147,7 +147,7 @@ export async function handleMessage(
     case "autocomplete": {
       autocomplete(msg.partial).then((candidates) => {
         send({ type: "autocomplete-result", panelId: msg.panelId, candidates });
-      });
+      }).catch((e) => console.error("[DECK] 자동완성 실패:", e));
       break;
     }
 

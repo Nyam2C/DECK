@@ -147,15 +147,15 @@ export function createServer(options: DeckServerOptions) {
             if (session && session.panels.length > 0) {
               send(ws, { type: "restore-session", panels: session.panels });
             }
-          });
+          }).catch((e) => console.error("[DECK] 세션 로드 실패:", e));
         }
-      });
+      }).catch((e) => console.error("[DECK] 프리셋 로드 실패:", e));
     } else {
       loadSession().then((session) => {
         if (session && session.panels.length > 0) {
           send(ws, { type: "restore-session", panels: session.panels });
         }
-      });
+      }).catch((e) => console.error("[DECK] 세션 로드 실패:", e));
     }
 
     ws.on("message", (raw) => {
