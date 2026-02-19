@@ -1,4 +1,4 @@
-<h1><img src="electron/icons/icon.png" width="30" align="center" /> DECK</h1>
+<h1><img src="electron/icons/icon.png" width="64" align="center" /> DECK</h1>
 
 멀티 패널 AI 코딩 어시스턴트 터미널.
 
