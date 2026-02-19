@@ -104,7 +104,7 @@ export function Toolbar() {
   }, []);
 
   return (
-    <header className="flex items-center justify-between px-5 py-1.5 min-h-[52px] bg-deck-panel/80 backdrop-blur-sm border-b border-dotted border-deck-border relative z-40 shrink-0">
+    <header className="flex items-center justify-between px-5 py-1.5 min-h-[52px] bg-deck-panel/80 backdrop-blur-sm border-b border-dotted border-deck-border relative z-40 shrink-0 [-webkit-app-region:drag]">
       {/* 좌측: 로고 */}
       <div className="flex items-center gap-2">
         {isMiku && (
@@ -114,9 +114,9 @@ export function Toolbar() {
         {isMiku && <span className="text-deck-gold text-[10px] animate-sparkle opacity-60">✦</span>}
       </div>
 
-      {/* 중앙: 장식 (miku 전용) */}
+      {/* 중앙: 장식 (miku 전용) — absolute로 정중앙 배치 */}
       {isMiku && (
-        <div className="flex items-center gap-2">
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 pointer-events-none">
           <span
             className="text-deck-pink text-[10px] animate-sparkle opacity-40"
             style={{ animationDelay: ".5s" }}
@@ -136,7 +136,7 @@ export function Toolbar() {
       )}
 
       {/* 우측: 버튼 (＋ · ⏱ · ⚙) */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 [-webkit-app-region:no-drag]">
         {isMiku && (
           <img src="/sprites/miku-run.gif" alt="" className="miku-sprite h-9 shrink-0 opacity-80" />
         )}
@@ -199,6 +199,32 @@ export function Toolbar() {
         >
           ⚙
         </button>
+        {/* 창 컨트롤 (Electron) */}
+        {"electronAPI" in window && (
+          <div className="flex items-center ml-2 border-l border-deck-border pl-2">
+            <button
+              onClick={() => (window as any).electronAPI.minimize()}
+              className="text-deck-dim hover:text-deck-cyan px-2 py-1 text-xs transition-colors cursor-pointer"
+              aria-label="최소화"
+            >
+              ─
+            </button>
+            <button
+              onClick={() => (window as any).electronAPI.maximize()}
+              className="text-deck-dim hover:text-deck-cyan px-2 py-1 text-xs transition-colors cursor-pointer"
+              aria-label="최대화"
+            >
+              □
+            </button>
+            <button
+              onClick={() => (window as any).electronAPI.close()}
+              className="text-deck-dim hover:text-deck-pink px-2 py-1 text-xs transition-colors cursor-pointer"
+              aria-label="닫기"
+            >
+              ✕
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

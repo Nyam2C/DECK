@@ -1,5 +1,6 @@
-import { app, BrowserWindow, globalShortcut } from "electron";
+import { app, BrowserWindow, globalShortcut, ipcMain } from "electron";
 import windowStateKeeper from "electron-window-state";
+import { resolve } from "node:path";
 import { startBackend, stopBackend } from "./backend";
 import { createTray, destroyTray } from "./tray";
 
@@ -38,10 +39,12 @@ if (!gotLock) {
       height: windowState.height,
       minWidth: 800,
       minHeight: 600,
+      frame: false,
       backgroundColor: "#0a0a14",
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
+        preload: resolve(__dirname, "preload.js"),
       },
     }) as BrowserWindow & { _forceQuit?: boolean };
 
@@ -58,6 +61,14 @@ if (!gotLock) {
         mainWindow.hide();
       }
     });
+
+    // IPC: 창 컨트롤
+    ipcMain.on("window-minimize", () => mainWindow.minimize());
+    ipcMain.on("window-maximize", () => {
+      if (mainWindow.isMaximized()) mainWindow.unmaximize();
+      else mainWindow.maximize();
+    });
+    ipcMain.on("window-close", () => mainWindow.close());
 
     // 트레이 생성
     createTray(mainWindow);

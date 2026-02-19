@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, execSync, type ChildProcess } from "node:child_process";
 import { resolve } from "node:path";
 import http from "node:http";
 
@@ -60,8 +60,17 @@ export function startBackend(): Promise<void> {
 }
 
 export function stopBackend(): void {
-  if (backendProcess && !backendProcess.killed) {
-    backendProcess.kill("SIGTERM");
+  if (backendProcess && !backendProcess.killed && backendProcess.pid) {
+    try {
+      if (process.platform === "win32") {
+        // Windows: 프로세스 트리 전체 강제 종료 (PTY 자식 포함)
+        execSync(`taskkill /F /T /PID ${backendProcess.pid}`, { stdio: "ignore" });
+      } else {
+        backendProcess.kill("SIGTERM");
+      }
+    } catch {
+      // 이미 종료된 경우 무시
+    }
     backendProcess = null;
   }
 }
