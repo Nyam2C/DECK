@@ -157,3 +157,4 @@ describe("ensureResumeFlag", () => {
     expect(ensureResumeFlag("")).toBe("-r");
   });
 });
+

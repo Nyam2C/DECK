@@ -2,7 +2,7 @@ import type { ClientMessage, ServerMessage } from "./types";
 import type { PtyManager } from "./pty-manager";
 import { autocomplete } from "./directory";
 import { checkHook, registerHook } from "./hook";
-import { saveSession } from "./session-manager";
+import { saveSession, hasClaudeConversations } from "./session-manager";
 
 type SendFn = (msg: ServerMessage) => void;
 
@@ -10,12 +10,12 @@ type SendFn = (msg: ServerMessage) => void;
  * WebSocket으로 수신한 JSON 문자열을 파싱하고,
  * 메시지 타입에 따라 적절한 PTY 매니저 메서드를 호출한다.
  */
-export function handleMessage(
+export async function handleMessage(
   raw: string,
   ptyManager: PtyManager,
   send: SendFn,
   port: number,
-): void {
+): Promise<void> {
   let msg: ClientMessage;
 
   try {
@@ -28,9 +28,19 @@ export function handleMessage(
   switch (msg.type) {
     case "create": {
       try {
+        let { options } = msg;
+
+        // Claude CLI + -r: 대화 기록이 없으면 -r 제거
+        if (msg.cli === "claude" && /(?:^|\s)(?:-r|--resume)(?:\s|$)/.test(options)) {
+          const hasConv = await hasClaudeConversations(msg.path);
+          if (!hasConv) {
+            options = options.replace(/(?:^|\s)(?:-r|--resume)(?=\s|$)/g, "").trim();
+          }
+        }
+
         // options 문자열을 공백으로 분리하여 args 배열 구성
         // 예: "--model sonnet --permission-mode plan" → ["--model", "sonnet", ...]
-        const args = msg.options ? msg.options.split(/\s+/).filter(Boolean) : [];
+        const args = options ? options.split(/\s+/).filter(Boolean) : [];
         const panelId = ptyManager.create(
           msg.cli,
           args,
@@ -39,7 +49,7 @@ export function handleMessage(
           24,
           msg.panelId,
           msg.cli,
-          msg.options,
+          options,
         );
         send({ type: "created", panelId });
         saveSession(ptyManager.getActivePanels());

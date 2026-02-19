@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import type { Preset, PresetPanel, SessionState } from "./types";
@@ -64,3 +64,19 @@ export function createSessionManager(basePath: string = DECK_DIR) {
 // 기본 인스턴스 (프로덕션용)
 const defaultManager = createSessionManager();
 export const { loadPresets, savePreset, deletePreset, loadSession, saveSession } = defaultManager;
+
+/**
+ * 지정된 작업 경로에 Claude 대화 기록(.jsonl)이 존재하는지 확인한다.
+ * Claude는 ~/.claude/projects/<encoded-path>/ 에 대화를 저장한다.
+ * 경로 인코딩: [a-zA-Z0-9._-] 이외의 모든 문자를 '-'로 치환.
+ */
+export async function hasClaudeConversations(cwd: string): Promise<boolean> {
+  const encoded = cwd.replace(/[^a-zA-Z0-9._-]/g, "-");
+  const projectDir = join(homedir(), ".claude", "projects", encoded);
+  try {
+    const entries = await readdir(projectDir);
+    return entries.some((e) => e.endsWith(".jsonl"));
+  } catch {
+    return false;
+  }
+}

@@ -29,6 +29,15 @@ export function App() {
   // WebSocket 연결 초기화
   useWebSocketInit();
 
+  // startBehavior에 따라 localStorage 패널 처리
+  useEffect(() => {
+    const { startBehavior } = useSettingsStore.getState();
+    if (startBehavior === "empty") {
+      // "빈 상태로 시작" → localStorage 패널 제거
+      usePanelStore.setState({ panels: [], focusedId: null, pinnedId: null });
+    }
+  }, []);
+
   // 서버 메시지 라우팅
   useEffect(() => {
     // 상태 진입 시각 기록 — 잔여 출력과 실제 응답을 구분하기 위한 디바운스
@@ -43,6 +52,7 @@ export function App() {
       switch (msg.type) {
         case "output": {
           const panel = usePanelStore.getState().panels.find((p) => p.id === msg.panelId);
+
           if (panel?.status === "idle") {
             const idleAt = idleEnteredAt.get(msg.panelId);
             if (idleAt === undefined || Date.now() - idleAt > IDLE_GRACE_MS) {
@@ -85,6 +95,10 @@ export function App() {
         case "restore-session": {
           const startBehavior = useSettingsStore.getState().startBehavior;
           if (startBehavior !== "restore") break;
+
+          // localStorage에서 복원된 기존 패널 제거 (서버 데이터로 새로 생성)
+          usePanelStore.setState({ panels: [], focusedId: null, pinnedId: null });
+
           for (const pp of msg.panels) {
             const id = usePanelStore.getState().addPanel();
             if (!id) break;

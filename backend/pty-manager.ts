@@ -17,6 +17,9 @@ export class PtyManager {
   private outputBuffers = new Map<string, string>();
   private batchTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // killAll()로 종료된 세션 — onExit 콜백을 억제하여 session.json 덮어쓰기 방지
+  private killedByBulk = new Set<string>();
+
   constructor(onData: OnDataCallback, onExit: OnExitCallback) {
     this.onData = onData;
     this.onExit = onExit;
@@ -91,6 +94,10 @@ export class PtyManager {
         this.onData(id, remaining);
       }
       this.sessions.delete(id);
+
+      // killAll()로 종료된 세션은 onExit 콜백을 억제 (session.json 보호)
+      if (this.killedByBulk.delete(id)) return;
+
       this.onExit(id, exitCode);
     });
 
@@ -126,7 +133,8 @@ export class PtyManager {
       this.batchTimer = null;
     }
     this.outputBuffers.clear();
-    for (const [, session] of this.sessions) {
+    for (const [id, session] of this.sessions) {
+      this.killedByBulk.add(id);
       session.pty.kill();
     }
     this.sessions.clear();
