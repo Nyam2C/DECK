@@ -139,6 +139,7 @@ export class PtyManager {
     if (!session) return; // 이미 종료된 경우 무시
     session.pty.kill();
     this.sessions.delete(id);
+    this.outputBuffers.delete(id);
     this.scrollbackBuffers.delete(id);
   }
 

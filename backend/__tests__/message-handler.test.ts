@@ -190,6 +190,34 @@ describe("handleMessage", () => {
     expect(manager.create).toHaveBeenCalledWith("bash", [], "/tmp", 80, 24, undefined, "bash", "");
   });
 
+  it("따옴표로 감싼 옵션 값을 하나의 인자로 유지한다", async () => {
+    const manager = mockPtyManager();
+    const send = vi.fn<(msg: ServerMessage) => void>();
+
+    await handleMessage(
+      JSON.stringify({
+        type: "create",
+        cli: "claude",
+        path: "/tmp",
+        options: '--model opus --append-system-prompt "코드를 한국어로 작성하세요"',
+      }),
+      manager,
+      send,
+      3000,
+    );
+
+    expect(manager.create).toHaveBeenCalledWith(
+      "claude",
+      ["--model", "opus", "--append-system-prompt", "코드를 한국어로 작성하세요"],
+      "/tmp",
+      80,
+      24,
+      undefined,
+      "claude",
+      '--model opus --append-system-prompt "코드를 한국어로 작성하세요"',
+    );
+  });
+
   it("Claude -r 옵션에서 대화 기록이 없으면 -r을 제거한다", async () => {
     const { hasClaudeConversations } = await import("../session-manager");
     vi.mocked(hasClaudeConversations).mockResolvedValueOnce(false);

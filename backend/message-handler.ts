@@ -6,6 +6,24 @@ import { saveSession, hasClaudeConversations } from "./session-manager";
 
 type SendFn = (msg: ServerMessage) => void;
 
+/** 따옴표를 인식하는 args 분리. buildClaudeCommand가 `"..."`로 감싼 값을 하나의 토큰으로 유지한다. */
+function splitArgs(s: string): string[] {
+  const args: string[] = [];
+  let current = "";
+  let inQuote = false;
+  for (const ch of s) {
+    if (ch === '"') { inQuote = !inQuote; continue; }
+    if (!inQuote && /\s/.test(ch)) {
+      if (current) args.push(current);
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  if (current) args.push(current);
+  return args;
+}
+
 /**
  * WebSocket으로 수신한 JSON 문자열을 파싱하고,
  * 메시지 타입에 따라 적절한 PTY 매니저 메서드를 호출한다.
@@ -38,9 +56,7 @@ export async function handleMessage(
           }
         }
 
-        // options 문자열을 공백으로 분리하여 args 배열 구성
-        // 예: "--model sonnet --permission-mode plan" → ["--model", "sonnet", ...]
-        const args = options ? options.split(/\s+/).filter(Boolean) : [];
+        const args = options ? splitArgs(options) : [];
         const panelId = ptyManager.create(
           msg.cli,
           args,
