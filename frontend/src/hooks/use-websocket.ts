@@ -20,7 +20,8 @@ export type ServerMessage =
   | { type: "status"; panelId: string; state: PanelState }
   | { type: "error"; panelId: string; message: string }
   | { type: "hook-notify"; panelId: string; message: string }
-  | { type: "hook-status"; panelId: string; connected: boolean };
+  | { type: "hook-status"; panelId: string; connected: boolean }
+  | { type: "restore-session"; panels: { cli: string; path: string; options: string }[] };
 
 // ═══════════════════════ 연결 상태 스토어 ═══════════════════════
 

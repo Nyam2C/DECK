@@ -8,7 +8,8 @@ import { join, extname } from "node:path";
 import { WebSocketServer, WebSocket } from "ws";
 import { handleMessage } from "./message-handler";
 import { PtyManager } from "./pty-manager";
-import type { ServerMessage } from "./types";
+import type { ServerMessage, Preset } from "./types";
+import { loadPresets, savePreset, deletePreset, loadSession, saveSession } from "./session-manager";
 
 export interface DeckServerOptions {
   port: number;
@@ -47,6 +48,7 @@ export function createServer(options: DeckServerOptions) {
     },
     (panelId, exitCode) => {
       if (activeWs) send(activeWs, { type: "exited", panelId, exitCode });
+      saveSession(ptyManager.getActivePanels());
     },
   );
 
@@ -57,6 +59,37 @@ export function createServer(options: DeckServerOptions) {
     // 훅 엔드포인트
     if (url.pathname === "/hook/notify" && req.method === "POST") {
       await handleHookNotify(req, res);
+      return;
+    }
+
+    // ─── 프리셋 API ───
+    if (url.pathname === "/api/presets" && req.method === "GET") {
+      const presets = await loadPresets();
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(presets));
+      return;
+    }
+    if (url.pathname === "/api/presets" && req.method === "POST") {
+      const body = await readBody(req);
+      try {
+        const preset = JSON.parse(body) as Preset;
+        await savePreset(preset);
+        res.writeHead(200).end("OK");
+      } catch {
+        res.writeHead(400).end("Bad Request");
+      }
+      return;
+    }
+    if (url.pathname.startsWith("/api/presets/") && req.method === "DELETE") {
+      const name = decodeURIComponent(url.pathname.slice("/api/presets/".length));
+      await deletePreset(name);
+      res.writeHead(200).end("OK");
+      return;
+    }
+    if (url.pathname === "/api/session" && req.method === "GET") {
+      const session = await loadSession();
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(session));
       return;
     }
 
@@ -78,6 +111,13 @@ export function createServer(options: DeckServerOptions) {
     ptyManager.killAll();
 
     activeWs = ws;
+
+    // 세션 복원 데이터 전송 (프론트엔드에서 startBehavior 설정에 따라 적용 여부 결정)
+    loadSession().then((session) => {
+      if (session && session.panels.length > 0) {
+        send(ws, { type: "restore-session", panels: session.panels });
+      }
+    });
 
     ws.on("message", (raw) => {
       const data = typeof raw === "string" ? raw : raw.toString();
@@ -121,6 +161,17 @@ export function createServer(options: DeckServerOptions) {
   }
 
   return { server, wss, ptyManager };
+}
+
+/** HTTP 요청 본문 읽기 */
+function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve) => {
+    let body = "";
+    req.on("data", (chunk: Buffer) => {
+      body += chunk.toString();
+    });
+    req.on("end", () => resolve(body));
+  });
 }
 
 /** 정적 파일 서빙 */

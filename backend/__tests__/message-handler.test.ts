@@ -3,6 +3,10 @@ import { handleMessage } from "../message-handler";
 import type { PtyManager } from "../pty-manager";
 import type { ServerMessage } from "../types";
 
+vi.mock("../session-manager", () => ({
+  saveSession: vi.fn(),
+}));
+
 function mockPtyManager(overrides = {}): PtyManager {
   return {
     create: vi.fn().mockReturnValue("test-id"),
@@ -10,6 +14,7 @@ function mockPtyManager(overrides = {}): PtyManager {
     resize: vi.fn(),
     kill: vi.fn(),
     killAll: vi.fn(),
+    getActivePanels: vi.fn().mockReturnValue([]),
     count: 0,
     has: vi.fn().mockReturnValue(true),
     ...overrides,
@@ -35,6 +40,8 @@ describe("handleMessage", () => {
       80,
       24,
       undefined,
+      "claude",
+      "--model sonnet",
     );
     expect(send).toHaveBeenCalledWith({ type: "created", panelId: "test-id" });
   });
@@ -174,6 +181,6 @@ describe("handleMessage", () => {
       3000,
     );
 
-    expect(manager.create).toHaveBeenCalledWith("bash", [], "/tmp", 80, 24, undefined);
+    expect(manager.create).toHaveBeenCalledWith("bash", [], "/tmp", 80, 24, undefined, "bash", "");
   });
 });

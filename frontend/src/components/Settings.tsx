@@ -268,16 +268,144 @@ function ShortcutsTab() {
   );
 }
 
+import { usePanelStore } from "../stores/panel-store";
+import { sendMessage } from "../hooks/use-websocket";
+import { ensureResumeFlag } from "../services/cli-provider";
+
+interface PresetData {
+  name: string;
+  panels: { cli: string; path: string; options: string }[];
+  createdAt: string;
+}
+
 function PresetsTab() {
+  const [presets, setPresets] = useState<PresetData[]>([]);
+  const [newName, setNewName] = useState("");
+  const [loading, setLoading] = useState(true);
+  const closeSettings = useSettingsStore((s) => s.closeSettings);
+
+  async function fetchPresets() {
+    try {
+      const res = await fetch("/api/presets");
+      const data = (await res.json()) as PresetData[];
+      setPresets(data);
+    } catch {
+      /* ignore */
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchPresets();
+  }, []);
+
+  async function handleSave() {
+    const name = newName.trim();
+    if (!name) return;
+    const panels = usePanelStore
+      .getState()
+      .panels.filter((p) => p.status !== "setup" && p.status !== "exited")
+      .map((p) => ({ cli: p.cli, path: p.path, options: p.options }));
+    if (panels.length === 0) return;
+    const preset: PresetData = { name, panels, createdAt: new Date().toISOString() };
+    await fetch("/api/presets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(preset),
+    });
+    setNewName("");
+    await fetchPresets();
+  }
+
+  async function handleDelete(name: string) {
+    await fetch(`/api/presets/${encodeURIComponent(name)}`, { method: "DELETE" });
+    await fetchPresets();
+  }
+
+  function handleLoad(preset: PresetData) {
+    // 기존 활성 패널 모두 kill
+    const store = usePanelStore.getState();
+    for (const p of store.panels) {
+      if (p.status !== "setup" && p.status !== "exited") {
+        sendMessage({ type: "kill", panelId: p.id });
+      }
+    }
+    usePanelStore.setState({ panels: [], focusedId: null, pinnedId: null });
+
+    // 프리셋 패널 순차 생성
+    for (const pp of preset.panels) {
+      const id = usePanelStore.getState().addPanel();
+      if (!id) break;
+      const options = pp.cli === "claude" ? ensureResumeFlag(pp.options) : pp.options;
+      usePanelStore.getState().updatePanel(id, {
+        name: pp.path.split("/").pop() || "패널",
+        cli: pp.cli,
+        path: pp.path,
+        options,
+        status: "active",
+      });
+      sendMessage({ type: "create", panelId: id, cli: pp.cli, path: pp.path, options });
+    }
+    closeSettings();
+  }
+
   return (
     <div className="space-y-3 text-xs">
       <div className="text-deck-dim mb-1">▪ 프리셋 관리</div>
+
+      {/* 프리셋 목록 */}
       <div className="border border-dashed border-deck-border bg-deck-bg">
-        <div className="text-deck-dim text-center py-4">저장된 프리셋이 없습니다</div>
+        {loading ? (
+          <div className="text-deck-dim text-center py-4 animate-pulse">로딩 중...</div>
+        ) : presets.length === 0 ? (
+          <div className="text-deck-dim text-center py-4">저장된 프리셋이 없습니다</div>
+        ) : (
+          <div className="divide-y divide-dotted divide-deck-border">
+            {presets.map((preset) => (
+              <div key={preset.name} className="flex items-center justify-between px-3 py-2">
+                <div className="min-w-0">
+                  <div className="text-deck-text truncate">{preset.name}</div>
+                  <div className="text-deck-dim text-[10px]">{preset.panels.length}개 패널</div>
+                </div>
+                <div className="flex gap-1.5 shrink-0">
+                  <button
+                    onClick={() => handleLoad(preset)}
+                    className="px-2 py-0.5 border border-deck-cyan/50 text-deck-cyan hover:bg-deck-cyan/15 transition-colors"
+                  >
+                    로드
+                  </button>
+                  <button
+                    onClick={() => handleDelete(preset.name)}
+                    className="px-2 py-0.5 border border-dashed border-deck-border text-deck-dim hover:text-deck-pink hover:border-deck-pink/50 transition-colors"
+                  >
+                    삭제
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-      <div className="border border-dashed border-deck-cyan/30 text-deck-cyan/60 text-center py-2 cursor-pointer hover:bg-deck-cyan/5 hover:border-deck-cyan/50 hover:text-deck-cyan transition-all">
-        ＋ 현재 상태를 프리셋으로 저장
+
+      {/* 새 프리셋 저장 */}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSave()}
+          placeholder="프리셋 이름"
+          className="flex-1 bg-deck-bg border border-dashed border-deck-border px-2 py-1.5 text-deck-text font-term text-xs focus:border-deck-cyan/50 outline-none"
+        />
+        <button
+          onClick={handleSave}
+          className="border border-dashed border-deck-cyan/30 text-deck-cyan/60 px-3 py-1.5 cursor-pointer hover:bg-deck-cyan/5 hover:border-deck-cyan/50 hover:text-deck-cyan transition-all"
+        >
+          ＋ 저장
+        </button>
       </div>
+
       <div className="text-center text-deck-dim text-[10px] mt-2 leading-relaxed">
         자주 쓰는 패널 조합을
         <br />

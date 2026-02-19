@@ -2,6 +2,7 @@ import type { ClientMessage, ServerMessage } from "./types";
 import type { PtyManager } from "./pty-manager";
 import { autocomplete } from "./directory";
 import { checkHook, registerHook } from "./hook";
+import { saveSession } from "./session-manager";
 
 type SendFn = (msg: ServerMessage) => void;
 
@@ -30,8 +31,18 @@ export function handleMessage(
         // options 문자열을 공백으로 분리하여 args 배열 구성
         // 예: "--model sonnet --permission-mode plan" → ["--model", "sonnet", ...]
         const args = msg.options ? msg.options.split(/\s+/).filter(Boolean) : [];
-        const panelId = ptyManager.create(msg.cli, args, msg.path, 80, 24, msg.panelId);
+        const panelId = ptyManager.create(
+          msg.cli,
+          args,
+          msg.path,
+          80,
+          24,
+          msg.panelId,
+          msg.cli,
+          msg.options,
+        );
         send({ type: "created", panelId });
+        saveSession(ptyManager.getActivePanels());
 
         // Claude CLI일 때 훅 등록 상태 확인
         if (msg.cli === "claude") {
@@ -77,6 +88,7 @@ export function handleMessage(
 
     case "kill": {
       ptyManager.kill(msg.panelId);
+      saveSession(ptyManager.getActivePanels());
       break;
     }
 

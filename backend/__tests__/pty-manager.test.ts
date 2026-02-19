@@ -112,6 +112,32 @@ describe("PtyManager", () => {
     expect(() => manager.kill("nonexistent")).not.toThrow();
   });
 
+  it("getActivePanels가 활성 세션 메타데이터를 반환한다", () => {
+    manager.create(
+      "claude",
+      ["--model", "opus"],
+      "/home",
+      80,
+      24,
+      undefined,
+      "claude",
+      "--model opus",
+    );
+    manager.create("bash", [], "/tmp", 80, 24, undefined, "bash", "");
+
+    const panels = manager.getActivePanels();
+    expect(panels).toHaveLength(2);
+    expect(panels[0]).toEqual({ cli: "claude", path: "/home", options: "--model opus" });
+    expect(panels[1]).toEqual({ cli: "bash", path: "/tmp", options: "" });
+  });
+
+  it("getActivePanels — cli/options 미전달 시 기본값으로 채운다", () => {
+    manager.create("echo", ["hello"], "/tmp", 80, 24);
+    const panels = manager.getActivePanels();
+    expect(panels).toHaveLength(1);
+    expect(panels[0]).toEqual({ cli: "echo", path: "/tmp", options: "hello" });
+  });
+
   it("DECK_PANEL_ID 환경 변수를 설정한다", async () => {
     const pty = await import("node-pty");
     const id = manager.create("echo", ["test"], "/tmp", 80, 24);

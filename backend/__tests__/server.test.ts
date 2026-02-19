@@ -12,6 +12,27 @@ vi.mock("node-pty", () => ({
   })),
 }));
 
+// session-manager 모킹
+const mockPresets = [
+  {
+    name: "dev",
+    panels: [{ cli: "claude", path: "/home", options: "--model opus" }],
+    createdAt: "2025-01-01",
+  },
+];
+const mockSession = {
+  panels: [{ cli: "claude", path: "/tmp", options: "--model sonnet" }],
+  updatedAt: "2025-01-01",
+};
+
+vi.mock("../session-manager", () => ({
+  loadPresets: vi.fn(() => Promise.resolve(mockPresets)),
+  savePreset: vi.fn(() => Promise.resolve()),
+  deletePreset: vi.fn(() => Promise.resolve()),
+  loadSession: vi.fn(() => Promise.resolve(mockSession)),
+  saveSession: vi.fn(() => Promise.resolve()),
+}));
+
 import { createServer } from "../server";
 
 describe("createServer", () => {
@@ -138,6 +159,77 @@ describe("createServer", () => {
     ws.send("invalid json");
     const reply = JSON.parse(await msgPromise);
     expect(reply.type).toBe("error");
+
+    ws.close();
+  });
+
+  // ─── 프리셋 API ───
+
+  it("GET /api/presets가 프리셋 목록을 반환한다", async () => {
+    await waitForServer();
+    const res = await fetch(`http://127.0.0.1:${PORT}/api/presets`);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toHaveLength(1);
+    expect(data[0].name).toBe("dev");
+  });
+
+  it("POST /api/presets로 프리셋을 저장한다", async () => {
+    await waitForServer();
+    const res = await fetch(`http://127.0.0.1:${PORT}/api/presets`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "test",
+        panels: [{ cli: "bash", path: "/tmp", options: "" }],
+        createdAt: new Date().toISOString(),
+      }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("POST /api/presets에 잘못된 JSON 시 400을 반환한다", async () => {
+    await waitForServer();
+    const res = await fetch(`http://127.0.0.1:${PORT}/api/presets`, {
+      method: "POST",
+      body: "invalid",
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("DELETE /api/presets/:name으로 프리셋을 삭제한다", async () => {
+    await waitForServer();
+    const res = await fetch(`http://127.0.0.1:${PORT}/api/presets/dev`, {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("GET /api/session이 세션 데이터를 반환한다", async () => {
+    await waitForServer();
+    const res = await fetch(`http://127.0.0.1:${PORT}/api/session`);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.panels).toHaveLength(1);
+    expect(data.panels[0].cli).toBe("claude");
+  });
+
+  // ─── 세션 복원 ───
+
+  it("WebSocket 연결 시 restore-session 메시지를 전송한다", async () => {
+    await waitForServer();
+    const ws = new WebSocket(`ws://127.0.0.1:${PORT}/ws`);
+
+    // open 전에 메시지 핸들러 등록 (restore-session이 즉시 전송되므로)
+    const msgPromise = new Promise<string>((resolve) => {
+      ws.on("message", (data) => resolve(data.toString()));
+    });
+    await waitForOpen(ws);
+
+    const parsed = JSON.parse(await msgPromise);
+    expect(parsed.type).toBe("restore-session");
+    expect(parsed.panels).toHaveLength(1);
+    expect(parsed.panels[0].cli).toBe("claude");
 
     ws.close();
   });

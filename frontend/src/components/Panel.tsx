@@ -143,6 +143,8 @@ export function Panel({ panel, spanClassName }: PanelProps) {
   const pinnedId = usePanelStore((s) => s.pinnedId);
   const setPinned = usePanelStore((s) => s.setPinned);
   const [confirming, setConfirming] = useState(false);
+  const [isDropTarget, setIsDropTarget] = useState(false);
+  const [justDropped, setJustDropped] = useState(false);
 
   // deck:close-panel CustomEvent로 포커스된 패널 닫기
   useEffect(() => {
@@ -188,7 +190,7 @@ export function Panel({ panel, spanClassName }: PanelProps) {
 
   return (
     <div
-      className={`flex flex-col rounded border bg-deck-panel overflow-hidden cursor-pointer transition-all duration-300 ${statusClasses} ${spanClassName}`}
+      className={`flex flex-col rounded border bg-deck-panel overflow-hidden cursor-pointer transition-all duration-300 ${statusClasses} ${spanClassName} ${isDropTarget ? "border-deck-cyan border-2 border-dashed opacity-70" : ""} ${justDropped ? "animate-panel-land" : ""}`}
       style={{ minHeight: 0 }}
       onClick={() => {
         setFocus(panel.id);
@@ -225,9 +227,30 @@ export function Panel({ panel, spanClassName }: PanelProps) {
           </div>
         </div>
       ) : (
-        /* 패널 헤더 — 기본 */
+        /* 패널 헤더 — 기본 (드래그 핸들) */
         <div
-          className={`flex items-center justify-between px-3 py-2 border-b border-dotted border-deck-border shrink-0 ${
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.setData("text/plain", panel.id);
+            e.dataTransfer.effectAllowed = "move";
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+            setIsDropTarget(true);
+          }}
+          onDragLeave={() => setIsDropTarget(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDropTarget(false);
+            const draggedId = e.dataTransfer.getData("text/plain");
+            if (draggedId && draggedId !== panel.id) {
+              usePanelStore.getState().reorderPanels(draggedId, panel.id);
+              setJustDropped(true);
+              setTimeout(() => setJustDropped(false), 300);
+            }
+          }}
+          className={`flex items-center justify-between px-3 py-2 border-b border-dotted border-deck-border shrink-0 cursor-grab active:cursor-grabbing ${
             isPinned ? "bg-deck-cyan/10" : "bg-deck-bg/50"
           }`}
         >

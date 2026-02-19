@@ -246,3 +246,16 @@ export function getProvider(cli: string): CLIProvider {
 export function getProviderList(): CLIProvider[] {
   return [claudeCodeProvider, customProvider];
 }
+
+/**
+ * 프리셋/세션 복원 시 Claude Code 옵션에 -r (resume) 플래그를 보장한다.
+ * - 이미 -r / --resume이 있으면 그대로 반환
+ * - -c 플래그가 있으면 -r로 교체
+ * - 그 외 -r 추가
+ */
+export function ensureResumeFlag(options: string): string {
+  if (/(?:^|\s)(?:-r|--resume)(?:\s|$)/.test(options)) return options;
+  if (/(?:^|\s)-c(?:\s|$)/.test(options))
+    return options.replace(/(?:^|\s)-c(?=\s|$)/, " -r").trim();
+  return options ? `${options} -r` : "-r";
+}

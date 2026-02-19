@@ -1,5 +1,5 @@
 import * as pty from "node-pty";
-import type { PtySession } from "./types";
+import type { PtySession, PresetPanel } from "./types";
 
 const MAX_SESSIONS = 4;
 
@@ -53,6 +53,8 @@ export class PtyManager {
     cols: number,
     rows: number,
     panelId?: string,
+    cli?: string,
+    options?: string,
   ): string {
     if (this.sessions.size >= MAX_SESSIONS) {
       throw new Error(`최대 ${MAX_SESSIONS}개 세션까지 생성 가능`);
@@ -67,7 +69,14 @@ export class PtyManager {
       env: { ...process.env, DECK_PANEL_ID: id, CLAUDECODE: "" },
     });
 
-    const session: PtySession = { id, pty: shell, command, cwd };
+    const session: PtySession = {
+      id,
+      pty: shell,
+      command,
+      cwd,
+      cli: cli ?? command,
+      options: options ?? args.join(" "),
+    };
     this.sessions.set(id, session);
 
     shell.onData((data: string) => {
@@ -121,6 +130,15 @@ export class PtyManager {
       session.pty.kill();
     }
     this.sessions.clear();
+  }
+
+  /** 현재 활성 패널 메타데이터 목록 */
+  getActivePanels(): PresetPanel[] {
+    return Array.from(this.sessions.values()).map((s) => ({
+      cli: s.cli,
+      path: s.cwd,
+      options: s.options,
+    }));
   }
 
   /** 현재 세션 수 */

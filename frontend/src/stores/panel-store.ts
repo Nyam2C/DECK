@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Panel, PanelStatus } from "../types";
+import { reorderPanelIds } from "../services/drag";
 
 const MAX_PANELS = 4;
 
@@ -16,7 +17,7 @@ interface PanelStore {
   setPinned: (id: string | null) => void;
   updatePanel: (id: string, updates: Partial<Panel>) => void;
   setStatus: (id: string, status: PanelStatus) => void;
-  reorderPanels: (fromIndex: number, toIndex: number) => void;
+  reorderPanels: (draggedId: string, dropTargetId: string) => void;
 }
 
 export const usePanelStore = create<PanelStore>()(
@@ -80,12 +81,12 @@ export const usePanelStore = create<PanelStore>()(
         }));
       },
 
-      reorderPanels: (fromIndex, toIndex) => {
+      reorderPanels: (draggedId, dropTargetId) => {
         set((state) => {
-          const panels = [...state.panels];
-          const [removed] = panels.splice(fromIndex, 1);
-          panels.splice(toIndex, 0, removed);
-          return { panels };
+          const ids = state.panels.map((p) => p.id);
+          const newIds = reorderPanelIds(ids, draggedId, dropTargetId);
+          const panelMap = new Map(state.panels.map((p) => [p.id, p]));
+          return { panels: newIds.map((id) => panelMap.get(id)!) };
         });
       },
     }),

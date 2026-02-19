@@ -91,12 +91,13 @@ describe("usePanelStore", () => {
     expect(panel?.exitCode).toBeUndefined();
   });
 
-  it("reorderPanels로 순서를 변경한다", () => {
+  it("reorderPanels로 순서를 변경한다 (ID 기반)", () => {
     const id1 = usePanelStore.getState().addPanel()!;
     const id2 = usePanelStore.getState().addPanel()!;
     const id3 = usePanelStore.getState().addPanel()!;
-    usePanelStore.getState().reorderPanels(0, 2);
+    // id1↔id3 위치 교환
+    usePanelStore.getState().reorderPanels(id1, id3);
     const ids = usePanelStore.getState().panels.map((p) => p.id);
-    expect(ids).toEqual([id2, id3, id1]);
+    expect(ids).toEqual([id3, id2, id1]);
   });
 });

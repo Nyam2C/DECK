@@ -9,8 +9,10 @@ import {
   useWsState,
   onServerMessage,
   connectWebSocket,
+  sendMessage,
 } from "./hooks/use-websocket";
 import { useKeyboard } from "./hooks/use-keyboard";
+import { ensureResumeFlag } from "./services/cli-provider";
 
 export function App() {
   const isSettingsOpen = useSettingsStore((s) => s.isOpen);
@@ -80,6 +82,24 @@ export function App() {
             console.error("[DECK] 서버 에러:", msg.message);
           }
           break;
+        case "restore-session": {
+          const startBehavior = useSettingsStore.getState().startBehavior;
+          if (startBehavior !== "restore") break;
+          for (const pp of msg.panels) {
+            const id = usePanelStore.getState().addPanel();
+            if (!id) break;
+            const options = pp.cli === "claude" ? ensureResumeFlag(pp.options) : pp.options;
+            usePanelStore.getState().updatePanel(id, {
+              name: pp.path.split("/").pop() || "패널",
+              cli: pp.cli,
+              path: pp.path,
+              options,
+              status: "active",
+            });
+            sendMessage({ type: "create", panelId: id, cli: pp.cli, path: pp.path, options });
+          }
+          break;
+        }
       }
     });
   }, []);
