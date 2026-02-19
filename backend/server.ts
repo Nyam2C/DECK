@@ -107,17 +107,19 @@ export function createServer(options: DeckServerOptions) {
       activeWs = null;
     }
 
-    // 새로고침 시 고아 PTY 정리
-    ptyManager.killAll();
-
     activeWs = ws;
 
-    // 세션 복원 데이터 전송 (프론트엔드에서 startBehavior 설정에 따라 적용 여부 결정)
-    loadSession().then((session) => {
-      if (session && session.panels.length > 0) {
-        send(ws, { type: "restore-session", panels: session.panels });
-      }
-    });
+    // 살아있는 세션이 있으면 sync, 없으면 restore-session 흐름
+    const activeSessions = ptyManager.getActiveSessions();
+    if (activeSessions.length > 0) {
+      send(ws, { type: "sync", sessions: activeSessions });
+    } else {
+      loadSession().then((session) => {
+        if (session && session.panels.length > 0) {
+          send(ws, { type: "restore-session", panels: session.panels });
+        }
+      });
+    }
 
     ws.on("message", (raw) => {
       const data = typeof raw === "string" ? raw : raw.toString();

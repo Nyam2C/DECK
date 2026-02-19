@@ -114,6 +114,29 @@ export function App() {
           }
           break;
         }
+        case "sync": {
+          // 살아있는 PTY 세션에 재접속 — 서버 ID를 그대로 사용
+          const panels: import("./types").Panel[] = msg.sessions.map((s) => ({
+            id: s.id,
+            name: s.cwd.split("/").pop() || "패널",
+            cli: s.cli,
+            path: s.cwd,
+            options: s.options,
+            status: "active" as const,
+            hookConnected: null,
+          }));
+
+          usePanelStore.setState({
+            panels,
+            focusedId: panels[0]?.id ?? null,
+            pinnedId: null,
+          });
+
+          for (const s of msg.sessions) {
+            sendMessage({ type: "attach", panelId: s.id, cols: 80, rows: 24 });
+          }
+          break;
+        }
       }
     });
   }, []);
@@ -134,10 +157,11 @@ export function App() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
-  // 서버 연결 끊김 → 모든 running 패널 exited 전환
+  // 다른 탭에서 교체됨 → 모든 running 패널 exited 전환
+  // 일반 disconnected는 재연결 시도 중이므로 패널 상태 유지
   useEffect(() => {
     return useWsState.subscribe((state, prev) => {
-      if (prev.wasConnected && state.connectionState === "disconnected") {
+      if (prev.wasConnected && state.connectionState === "replaced") {
         const { panels, updatePanel } = usePanelStore.getState();
         for (const p of panels) {
           if (p.status === "active" || p.status === "idle" || p.status === "input") {

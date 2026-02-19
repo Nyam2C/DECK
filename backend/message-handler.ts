@@ -102,6 +102,23 @@ export async function handleMessage(
       break;
     }
 
+    case "attach": {
+      if (!ptyManager.has(msg.panelId)) {
+        send({ type: "error", panelId: msg.panelId, message: "세션 없음" });
+        break;
+      }
+      try {
+        ptyManager.resize(msg.panelId, msg.cols, msg.rows);
+      } catch {
+        // 리사이즈 실패는 무시 — 세션은 여전히 유효
+      }
+      const scrollback = ptyManager.getScrollback(msg.panelId);
+      if (scrollback) {
+        send({ type: "output", panelId: msg.panelId, data: scrollback });
+      }
+      break;
+    }
+
     case "autocomplete": {
       autocomplete(msg.partial).then((candidates) => {
         send({ type: "autocomplete-result", panelId: msg.panelId, candidates });
