@@ -9,7 +9,7 @@ interface PanelSetupProps {
   panelId: string;
 }
 
-type CliKey = "claude" | "custom";
+type CliKey = "claude" | "shell" | "custom";
 
 /** 프로바이더의 defaultValue로 초기 상태를 구성한다. */
 function buildDefaults(provider: CLIProvider): Record<string, unknown> {
@@ -134,6 +134,7 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
 
   // 명령어 미리보기 조합
   function previewCommand(): string {
+    if (cliKey === "shell") return "$SHELL";
     const cmd = provider.buildCommand(formState);
     if (path) return `${cmd} ${path}`;
     return cmd;
@@ -146,6 +147,7 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
       const cmd = (formState.command as string) || "";
       if (!cmd.trim()) return "명령어를 입력하세요";
     }
+    // shell은 command 검증 불필요
     return null;
   }
 
@@ -158,11 +160,20 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
 
     const trimmedPath = path.trim().replace(/\/+$/, "");
     const name = trimmedPath.split("/").pop() || "새 패널";
-    const cli =
-      cliKey === "claude" ? "claude" : (formState.command as string).split(/\s+/)[0] || "";
-    const cmd = provider.buildCommand(formState);
-    const options =
-      cliKey === "claude" ? cmd.replace(/^claude\s*/, "") : cmd.split(/\s+/).slice(1).join(" ");
+    let cli: string;
+    let options: string;
+    if (cliKey === "shell") {
+      cli = "shell";
+      options = "";
+    } else if (cliKey === "claude") {
+      cli = "claude";
+      const cmd = provider.buildCommand(formState);
+      options = cmd.replace(/^claude\s*/, "");
+    } else {
+      cli = (formState.command as string).split(/\s+/)[0] || "";
+      const cmd = provider.buildCommand(formState);
+      options = cmd.split(/\s+/).slice(1).join(" ");
+    }
 
     setError(null);
     setStarting(true);
@@ -289,7 +300,7 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
       {/* CLI 탭 */}
       <div className="flex gap-0">
         {providerList.map((p, i) => {
-          const key = p.command === "claude" ? "claude" : "custom";
+          const key = p.command === "claude" ? "claude" : p.command === "shell" ? "shell" : "custom";
           const isLast = i === providerList.length - 1;
           return (
             <button

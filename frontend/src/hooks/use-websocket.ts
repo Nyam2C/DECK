@@ -22,7 +22,7 @@ export type ServerMessage =
   | { type: "error"; panelId: string; message: string }
   | { type: "hook-notify"; panelId: string; message: string }
   | { type: "hook-status"; panelId: string; connected: boolean }
-  | { type: "restore-session"; panels: { cli: string; path: string; options: string }[] }
+  | { type: "restore-session"; panels: { cli: string; path: string; options: string }[]; source?: "preset" | "session" }
   | { type: "sync"; sessions: Array<{ id: string; cli: string; cwd: string; options: string }> };
 
 // ═══════════════════════ 연결 상태 스토어 ═══════════════════════

@@ -50,6 +50,12 @@ export async function handleMessage(
     case "create": {
       try {
         let { options } = msg;
+        let cli = msg.cli;
+
+        // shell → 실제 셸 명령어로 치환
+        if (cli === "shell") {
+          cli = process.env.SHELL || "/bin/sh";
+        }
 
         // Claude CLI + -r: 대화 기록이 없으면 -r 제거
         if (msg.cli === "claude" && /(?:^|\s)(?:-r|--resume)(?:\s|$)/.test(options)) {
@@ -61,7 +67,7 @@ export async function handleMessage(
 
         const args = options ? splitArgs(options) : [];
         const panelId = ptyManager.create(
-          msg.cli,
+          cli,
           args,
           msg.path,
           80,

@@ -93,8 +93,11 @@ export function App() {
           }
           break;
         case "restore-session": {
-          const startBehavior = useSettingsStore.getState().startBehavior;
-          if (startBehavior !== "restore") break;
+          // preset source이면 startBehavior 무시하고 항상 로드
+          if (msg.source !== "preset") {
+            const startBehavior = useSettingsStore.getState().startBehavior;
+            if (startBehavior !== "restore") break;
+          }
 
           // localStorage에서 복원된 기존 패널 제거 (서버 데이터로 새로 생성)
           usePanelStore.setState({ panels: [], focusedId: null, pinnedId: null });

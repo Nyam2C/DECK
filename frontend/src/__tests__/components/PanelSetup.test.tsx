@@ -100,8 +100,8 @@ describe("PanelSetup — 유효성 검증 로직", () => {
 });
 
 describe("PanelSetup — 고급 옵션 토글", () => {
-  it("프로바이더 목록은 2개이다", () => {
-    expect(getProviderList()).toHaveLength(2);
+  it("프로바이더 목록은 3개이다", () => {
+    expect(getProviderList()).toHaveLength(3);
   });
 
   it("Claude Code 고급 옵션에 텍스트/체크박스/텍스트에어리어가 포함된다", () => {

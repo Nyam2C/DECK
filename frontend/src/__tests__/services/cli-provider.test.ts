@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   claudeCodeProvider,
   customProvider,
+  shellProvider,
   getProvider,
   getProviderList,
   ensureResumeFlag,
@@ -110,6 +111,20 @@ describe("customProvider.buildCommand", () => {
   });
 });
 
+describe("shellProvider", () => {
+  it("buildCommand가 빈 문자열을 반환한다", () => {
+    expect(shellProvider.buildCommand({})).toBe("");
+  });
+
+  it("hookSupported가 false이다", () => {
+    expect(shellProvider.hookSupported).toBe(false);
+  });
+
+  it("옵션이 비어있다", () => {
+    expect(shellProvider.options).toHaveLength(0);
+  });
+});
+
 describe("getProvider / getProviderList", () => {
   it("claude로 Claude Code 프로바이더를 반환한다", () => {
     const p = getProvider("claude");
@@ -128,11 +143,18 @@ describe("getProvider / getProviderList", () => {
     expect(p.name).toBe("커스텀");
   });
 
-  it("getProviderList는 2개의 프로바이더를 반환한다", () => {
+  it("shell로 셸 프로바이더를 반환한다", () => {
+    const p = getProvider("shell");
+    expect(p.name).toBe("셸");
+    expect(p.command).toBe("shell");
+  });
+
+  it("getProviderList는 3개의 프로바이더를 반환한다", () => {
     const list = getProviderList();
-    expect(list).toHaveLength(2);
+    expect(list).toHaveLength(3);
     expect(list[0].name).toBe("Claude Code");
-    expect(list[1].name).toBe("커스텀");
+    expect(list[1].name).toBe("셸");
+    expect(list[2].name).toBe("커스텀");
   });
 });
 

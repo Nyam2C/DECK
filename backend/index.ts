@@ -8,10 +8,15 @@ const PORT = Number(process.env.DECK_PORT) || 3000;
 const HOSTNAME = "127.0.0.1";
 const STATIC_DIR = resolve(__dirname, "../frontend/dist");
 
+// --preset 인자 파싱
+const presetArgIndex = process.argv.indexOf("--preset");
+const presetName = presetArgIndex >= 0 ? process.argv[presetArgIndex + 1] : undefined;
+
 const { server, ptyManager } = createServer({
   port: PORT,
   hostname: HOSTNAME,
   staticDir: STATIC_DIR,
+  preset: presetName,
 });
 
 console.log(`DECK 서버 시작: http://${HOSTNAME}:${PORT}`);

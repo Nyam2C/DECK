@@ -43,6 +43,18 @@ export function createSessionManager(basePath: string = DECK_DIR) {
     await writeFile(presetsFile, JSON.stringify(filtered, null, 2));
   }
 
+  async function updatePreset(originalName: string, preset: Preset): Promise<void> {
+    await ensureDeckDir(basePath);
+    const presets = await loadPresets();
+    const index = presets.findIndex((p) => p.name === originalName);
+    if (index < 0) {
+      presets.push(preset);
+    } else {
+      presets[index] = preset;
+    }
+    await writeFile(presetsFile, JSON.stringify(presets, null, 2));
+  }
+
   async function loadSession(): Promise<SessionState | null> {
     try {
       const data = await readFile(sessionFile, "utf-8");
@@ -58,12 +70,12 @@ export function createSessionManager(basePath: string = DECK_DIR) {
     await writeFile(sessionFile, JSON.stringify(state, null, 2));
   }
 
-  return { loadPresets, savePreset, deletePreset, loadSession, saveSession };
+  return { loadPresets, savePreset, deletePreset, updatePreset, loadSession, saveSession };
 }
 
 // 기본 인스턴스 (프로덕션용)
 const defaultManager = createSessionManager();
-export const { loadPresets, savePreset, deletePreset, loadSession, saveSession } = defaultManager;
+export const { loadPresets, savePreset, deletePreset, updatePreset, loadSession, saveSession } = defaultManager;
 
 /**
  * 지정된 작업 경로에 Claude 대화 기록(.jsonl)이 존재하는지 확인한다.
