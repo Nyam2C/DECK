@@ -1,7 +1,8 @@
 import * as pty from "node-pty";
-import type { PtySession } from "./types";
+import type { PtySession, PresetPanel } from "./types";
 
 const MAX_SESSIONS = 4;
+const SCROLLBACK_LIMIT = 100_000; // 세션당 ~100KB
 
 export type OnDataCallback = (id: string, data: string) => void;
 export type OnExitCallback = (id: string, exitCode: number) => void;
@@ -17,6 +18,12 @@ export class PtyManager {
   private outputBuffers = new Map<string, string>();
   private batchTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // 재접속 시 출력 replay를 위한 스크롤백 버퍼
+  private scrollbackBuffers = new Map<string, string>();
+
+  // killAll()로 종료된 세션 — onExit 콜백을 억제하여 session.json 덮어쓰기 방지
+  private killedByBulk = new Set<string>();
+
   constructor(onData: OnDataCallback, onExit: OnExitCallback) {
     this.onData = onData;
     this.onExit = onExit;
@@ -25,6 +32,16 @@ export class PtyManager {
   private bufferOutput(id: string, data: string): void {
     const existing = this.outputBuffers.get(id);
     this.outputBuffers.set(id, existing ? existing + data : data);
+
+    // 스크롤백 버퍼에도 축적
+    const sb = this.scrollbackBuffers.get(id) ?? "";
+    const combined = sb + data;
+    this.scrollbackBuffers.set(
+      id,
+      combined.length > SCROLLBACK_LIMIT
+        ? combined.slice(combined.length - SCROLLBACK_LIMIT)
+        : combined,
+    );
 
     if (!this.batchTimer) {
       this.batchTimer = setTimeout(() => this.flushBuffers(), BATCH_INTERVAL);
@@ -53,6 +70,8 @@ export class PtyManager {
     cols: number,
     rows: number,
     panelId?: string,
+    cli?: string,
+    options?: string,
   ): string {
     if (this.sessions.size >= MAX_SESSIONS) {
       throw new Error(`최대 ${MAX_SESSIONS}개 세션까지 생성 가능`);
@@ -67,7 +86,14 @@ export class PtyManager {
       env: { ...process.env, DECK_PANEL_ID: id, CLAUDECODE: "" },
     });
 
-    const session: PtySession = { id, pty: shell, command, cwd };
+    const session: PtySession = {
+      id,
+      pty: shell,
+      command,
+      cwd,
+      cli: cli ?? command,
+      options: options ?? args.join(" "),
+    };
     this.sessions.set(id, session);
 
     shell.onData((data: string) => {
@@ -82,6 +108,11 @@ export class PtyManager {
         this.onData(id, remaining);
       }
       this.sessions.delete(id);
+      this.scrollbackBuffers.delete(id);
+
+      // killAll()로 종료된 세션은 onExit 콜백을 억제 (session.json 보호)
+      if (this.killedByBulk.delete(id)) return;
+
       this.onExit(id, exitCode);
     });
 
@@ -106,8 +137,11 @@ export class PtyManager {
   kill(id: string): void {
     const session = this.sessions.get(id);
     if (!session) return; // 이미 종료된 경우 무시
+    this.killedByBulk.add(id);
     session.pty.kill();
     this.sessions.delete(id);
+    this.outputBuffers.delete(id);
+    this.scrollbackBuffers.delete(id);
   }
 
   /** 모든 PTY 종료 (서버 셧다운 시) */
@@ -117,10 +151,36 @@ export class PtyManager {
       this.batchTimer = null;
     }
     this.outputBuffers.clear();
-    for (const [, session] of this.sessions) {
+    this.scrollbackBuffers.clear();
+    for (const [id, session] of this.sessions) {
+      this.killedByBulk.add(id);
       session.pty.kill();
     }
     this.sessions.clear();
+  }
+
+  /** 현재 활성 패널 메타데이터 목록 */
+  getActivePanels(): PresetPanel[] {
+    return Array.from(this.sessions.values()).map((s) => ({
+      cli: s.cli,
+      path: s.cwd,
+      options: s.options,
+    }));
+  }
+
+  /** 재접속용 세션 목록 (id 포함) */
+  getActiveSessions(): Array<{ id: string; cli: string; cwd: string; options: string }> {
+    return Array.from(this.sessions.values()).map((s) => ({
+      id: s.id,
+      cli: s.cli,
+      cwd: s.cwd,
+      options: s.options,
+    }));
+  }
+
+  /** 해당 세션의 스크롤백 반환 */
+  getScrollback(id: string): string {
+    return this.scrollbackBuffers.get(id) ?? "";
   }
 
   /** 현재 세션 수 */

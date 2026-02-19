@@ -2,19 +2,41 @@ import type { ClientMessage, ServerMessage } from "./types";
 import type { PtyManager } from "./pty-manager";
 import { autocomplete } from "./directory";
 import { checkHook, registerHook } from "./hook";
+import { saveSession, hasClaudeConversations } from "./session-manager";
 
 type SendFn = (msg: ServerMessage) => void;
+
+/** 따옴표를 인식하는 args 분리. buildClaudeCommand가 `"..."`로 감싼 값을 하나의 토큰으로 유지한다. */
+function splitArgs(s: string): string[] {
+  const args: string[] = [];
+  let current = "";
+  let inQuote = false;
+  for (const ch of s) {
+    if (ch === '"') {
+      inQuote = !inQuote;
+      continue;
+    }
+    if (!inQuote && /\s/.test(ch)) {
+      if (current) args.push(current);
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  if (current) args.push(current);
+  return args;
+}
 
 /**
  * WebSocket으로 수신한 JSON 문자열을 파싱하고,
  * 메시지 타입에 따라 적절한 PTY 매니저 메서드를 호출한다.
  */
-export function handleMessage(
+export async function handleMessage(
   raw: string,
   ptyManager: PtyManager,
   send: SendFn,
   port: number,
-): void {
+): Promise<void> {
   let msg: ClientMessage;
 
   try {
@@ -27,11 +49,29 @@ export function handleMessage(
   switch (msg.type) {
     case "create": {
       try {
-        // options 문자열을 공백으로 분리하여 args 배열 구성
-        // 예: "--model sonnet --permission-mode plan" → ["--model", "sonnet", ...]
-        const args = msg.options ? msg.options.split(/\s+/).filter(Boolean) : [];
-        const panelId = ptyManager.create(msg.cli, args, msg.path, 80, 24, msg.panelId);
+        let { options } = msg;
+
+        // Claude CLI + -r: 대화 기록이 없으면 -r 제거
+        if (msg.cli === "claude" && /(?:^|\s)(?:-r|--resume)(?:\s|$)/.test(options)) {
+          const hasConv = await hasClaudeConversations(msg.path);
+          if (!hasConv) {
+            options = options.replace(/(?:^|\s)(?:-r|--resume)(?=\s|$)/g, "").trim();
+          }
+        }
+
+        const args = options ? splitArgs(options) : [];
+        const panelId = ptyManager.create(
+          msg.cli,
+          args,
+          msg.path,
+          80,
+          24,
+          msg.panelId,
+          msg.cli,
+          options,
+        );
         send({ type: "created", panelId });
+        saveSession(ptyManager.getActivePanels());
 
         // Claude CLI일 때 훅 등록 상태 확인
         if (msg.cli === "claude") {
@@ -77,6 +117,24 @@ export function handleMessage(
 
     case "kill": {
       ptyManager.kill(msg.panelId);
+      saveSession(ptyManager.getActivePanels());
+      break;
+    }
+
+    case "attach": {
+      if (!ptyManager.has(msg.panelId)) {
+        send({ type: "error", panelId: msg.panelId, message: "세션 없음" });
+        break;
+      }
+      try {
+        ptyManager.resize(msg.panelId, msg.cols, msg.rows);
+      } catch {
+        // 리사이즈 실패는 무시 — 세션은 여전히 유효
+      }
+      const scrollback = ptyManager.getScrollback(msg.panelId);
+      if (scrollback) {
+        send({ type: "output", panelId: msg.panelId, data: scrollback });
+      }
       break;
     }
 

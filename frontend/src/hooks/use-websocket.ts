@@ -7,6 +7,7 @@ export type ClientMessage =
   | { type: "input"; panelId: string; data: string }
   | { type: "resize"; panelId: string; cols: number; rows: number }
   | { type: "kill"; panelId: string }
+  | { type: "attach"; panelId: string; cols: number; rows: number }
   | { type: "autocomplete"; panelId: string; partial: string }
   | { type: "register-hook"; panelId: string };
 
@@ -20,7 +21,9 @@ export type ServerMessage =
   | { type: "status"; panelId: string; state: PanelState }
   | { type: "error"; panelId: string; message: string }
   | { type: "hook-notify"; panelId: string; message: string }
-  | { type: "hook-status"; panelId: string; connected: boolean };
+  | { type: "hook-status"; panelId: string; connected: boolean }
+  | { type: "restore-session"; panels: { cli: string; path: string; options: string }[] }
+  | { type: "sync"; sessions: Array<{ id: string; cli: string; cwd: string; options: string }> };
 
 // ═══════════════════════ 연결 상태 스토어 ═══════════════════════
 

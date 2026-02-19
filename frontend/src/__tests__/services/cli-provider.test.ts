@@ -4,6 +4,7 @@ import {
   customProvider,
   getProvider,
   getProviderList,
+  ensureResumeFlag,
 } from "../../services/cli-provider";
 
 describe("claudeCodeProvider.buildCommand", () => {
@@ -132,5 +133,27 @@ describe("getProvider / getProviderList", () => {
     expect(list).toHaveLength(2);
     expect(list[0].name).toBe("Claude Code");
     expect(list[1].name).toBe("커스텀");
+  });
+});
+
+describe("ensureResumeFlag", () => {
+  it("이미 -r이 있으면 그대로 반환한다", () => {
+    expect(ensureResumeFlag("--model opus -r")).toBe("--model opus -r");
+  });
+
+  it("이미 --resume이 있으면 그대로 반환한다", () => {
+    expect(ensureResumeFlag("--resume --model opus")).toBe("--resume --model opus");
+  });
+
+  it("-c를 -r로 교체한다", () => {
+    expect(ensureResumeFlag("--model opus -c")).toBe("--model opus -r");
+  });
+
+  it("플래그가 없으면 -r을 추가한다", () => {
+    expect(ensureResumeFlag("--model opus")).toBe("--model opus -r");
+  });
+
+  it("빈 문자열이면 -r을 반환한다", () => {
+    expect(ensureResumeFlag("")).toBe("-r");
   });
 });

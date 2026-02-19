@@ -7,6 +7,7 @@ describe("useSettingsStore", () => {
     useSettingsStore.setState({
       ...DEFAULT_SETTINGS,
       isOpen: false,
+      draft: null,
     });
   });
 
@@ -35,15 +36,45 @@ describe("useSettingsStore", () => {
     expect(state.theme).toBe(DEFAULT_SETTINGS.theme);
   });
 
-  it("openSettings로 isOpen을 true로 변경한다", () => {
+  it("openSettings로 isOpen을 true로, draft를 현재 값으로 설정한다", () => {
+    useSettingsStore.getState().updateSettings({ fontSize: 20 });
     useSettingsStore.getState().openSettings();
-    expect(useSettingsStore.getState().isOpen).toBe(true);
+    const state = useSettingsStore.getState();
+    expect(state.isOpen).toBe(true);
+    expect(state.draft).not.toBeNull();
+    expect(state.draft!.fontSize).toBe(20);
   });
 
-  it("closeSettings로 isOpen을 false로 변경한다", () => {
+  it("closeSettings로 draft를 폐기한다", () => {
     useSettingsStore.getState().openSettings();
+    useSettingsStore.getState().updateDraft({ fontSize: 99 });
     useSettingsStore.getState().closeSettings();
-    expect(useSettingsStore.getState().isOpen).toBe(false);
+    const state = useSettingsStore.getState();
+    expect(state.isOpen).toBe(false);
+    expect(state.draft).toBeNull();
+    expect(state.fontSize).toBe(DEFAULT_SETTINGS.fontSize);
+  });
+
+  it("updateDraft는 draft만 변경하고 실제 설정은 유지한다", () => {
+    useSettingsStore.getState().openSettings();
+    useSettingsStore.getState().updateDraft({ fontSize: 24, theme: "blue-dark" });
+    const state = useSettingsStore.getState();
+    expect(state.draft!.fontSize).toBe(24);
+    expect(state.draft!.theme).toBe("blue-dark");
+    expect(state.fontSize).toBe(DEFAULT_SETTINGS.fontSize);
+    expect(state.theme).toBe(DEFAULT_SETTINGS.theme);
+  });
+
+  it("commitDraft로 draft를 실제 설정에 반영하고 모달은 열린 채 유지한다", () => {
+    useSettingsStore.getState().openSettings();
+    useSettingsStore.getState().updateDraft({ fontSize: 18, port: 8080 });
+    useSettingsStore.getState().commitDraft();
+    const state = useSettingsStore.getState();
+    expect(state.isOpen).toBe(true);
+    expect(state.draft).not.toBeNull();
+    expect(state.fontSize).toBe(18);
+    expect(state.port).toBe(8080);
+    expect(state.scrollback).toBe(DEFAULT_SETTINGS.scrollback);
   });
 
   it("startBehavior를 restore로 변경할 수 있다", () => {

@@ -5,6 +5,7 @@ import { WebglAddon } from "@xterm/addon-webgl";
 import "@xterm/xterm/css/xterm.css";
 
 import { sendMessage, onServerMessage } from "./use-websocket";
+import { isLeaderKey } from "./use-keyboard";
 import { useSettingsStore } from "../stores/settings-store";
 import type { ThemeId } from "../types";
 import type { ITheme } from "@xterm/xterm";
@@ -55,6 +56,13 @@ export function useTerminal({ panelId, containerRef }: UseTerminalOptions): void
     fitRef.current = fitAddon;
     terminal.loadAddon(fitAddon);
     terminal.open(container);
+
+    // Leader Key가 xterm에 전달되지 않도록 가로채기
+    terminal.attachCustomKeyEventHandler((domEvent) => {
+      if (isLeaderKey(domEvent, useSettingsStore.getState().leaderKey)) return false;
+      return true;
+    });
+
     fitAddon.fit();
 
     // 3. WebGL 렌더러 시도 (실패 시 캔버스 폴백)

@@ -39,6 +39,17 @@ describe("getGridClassName", () => {
 });
 
 describe("getPanelSpanClassName", () => {
+  // 일반 모드: 모든 경우 명시적 배치
+  it("1개 패널: col-start-1 row-start-1", () => {
+    expect(getPanelSpanClassName(0, 1, false, false)).toContain("col-start-1");
+    expect(getPanelSpanClassName(0, 1, false, false)).toContain("row-start-1");
+  });
+
+  it("2개 패널: 명시적 좌우 배치", () => {
+    expect(getPanelSpanClassName(0, 2, false, false)).toContain("col-start-1");
+    expect(getPanelSpanClassName(1, 2, false, false)).toContain("col-start-2");
+  });
+
   it("3개 패널의 마지막(index 2)에 오른쪽 전체 높이", () => {
     const cls = getPanelSpanClassName(2, 3, false, false);
     expect(cls).toContain("row-span-2");
@@ -57,10 +68,11 @@ describe("getPanelSpanClassName", () => {
     expect(cls).toContain("row-start-2");
   });
 
-  it("4개 패널에서는 배치 클래스 없음", () => {
-    for (let i = 0; i < 4; i++) {
-      expect(getPanelSpanClassName(i, 4, false, false)).toBe("");
-    }
+  it("4개 패널: 명시적 2x2 배치", () => {
+    expect(getPanelSpanClassName(0, 4, false, false)).toContain("col-start-1 row-start-1");
+    expect(getPanelSpanClassName(1, 4, false, false)).toContain("col-start-2 row-start-1");
+    expect(getPanelSpanClassName(2, 4, false, false)).toContain("col-start-1 row-start-2");
+    expect(getPanelSpanClassName(3, 4, false, false)).toContain("col-start-2 row-start-2");
   });
 
   // 핀 레이아웃

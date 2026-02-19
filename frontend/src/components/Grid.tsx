@@ -44,7 +44,11 @@ export function getGridClassName(panelCount: number, hasPinned: boolean): string
   }
 }
 
-/** 개별 패널의 grid 배치 클래스를 반환한다. */
+/**
+ * 개별 패널의 grid 배치 클래스를 반환한다.
+ * 모든 경우에 명시적 배치를 사용하여 DOM 순서와 무관하게 시각 위치를 결정한다.
+ * (DOM 순서가 바뀌면 xterm WebGL 컨텍스트가 유실되므로 DOM은 고정해야 함)
+ */
 export function getPanelSpanClassName(
   index: number,
   panelCount: number,
@@ -71,13 +75,31 @@ export function getPanelSpanClassName(
     return rowClasses[index] ?? "";
   }
 
-  // 일반 모드: 3개일 때 왼쪽 2개 + 오른쪽 1개 (명시적 배치)
-  if (panelCount === 3) {
-    if (index === 0) return "col-start-1 row-start-1";
-    if (index === 1) return "col-start-1 row-start-2";
-    if (index === 2) return "col-start-2 row-start-1 row-span-2";
+  // 일반 모드: 모든 경우 명시적 배치
+  if (panelCount === 1) {
+    return "col-start-1 row-start-1";
   }
-
+  if (panelCount === 2) {
+    const classes = ["col-start-1 row-start-1", "col-start-2 row-start-1"];
+    return classes[index] ?? "";
+  }
+  if (panelCount === 3) {
+    const classes = [
+      "col-start-1 row-start-1",
+      "col-start-1 row-start-2",
+      "col-start-2 row-start-1 row-span-2",
+    ];
+    return classes[index] ?? "";
+  }
+  if (panelCount === 4) {
+    const classes = [
+      "col-start-1 row-start-1",
+      "col-start-2 row-start-1",
+      "col-start-1 row-start-2",
+      "col-start-2 row-start-2",
+    ];
+    return classes[index] ?? "";
+  }
   return "";
 }
 
@@ -86,25 +108,32 @@ export function Grid() {
   const pinnedId = usePanelStore((s) => s.pinnedId);
   const hasPinned = pinnedId !== null;
 
-  // 핀된 패널을 먼저 배치
-  const sortedPanels = hasPinned
+  // 시각적 순서 계산 (핀 패널 우선)
+  const visualOrder = hasPinned
     ? [...panels.filter((p) => p.id === pinnedId), ...panels.filter((p) => p.id !== pinnedId)]
     : panels;
+  const visualIndexMap = new Map(visualOrder.map((p, i) => [p.id, i]));
+
+  // DOM 순서는 ID로 정렬하여 항상 고정 — xterm WebGL 컨텍스트 유실 방지
+  const stableOrder = [...panels].sort((a, b) => a.id.localeCompare(b.id));
 
   return (
     <main className={getGridClassName(panels.length, hasPinned)}>
-      {sortedPanels.map((panel, index) => (
-        <Panel
-          key={panel.id}
-          panel={panel}
-          spanClassName={getPanelSpanClassName(
-            index,
-            panels.length,
-            hasPinned,
-            panel.id === pinnedId,
-          )}
-        />
-      ))}
+      {stableOrder.map((panel) => {
+        const visualIndex = visualIndexMap.get(panel.id) ?? 0;
+        return (
+          <Panel
+            key={panel.id}
+            panel={panel}
+            spanClassName={getPanelSpanClassName(
+              visualIndex,
+              panels.length,
+              hasPinned,
+              panel.id === pinnedId,
+            )}
+          />
+        );
+      })}
     </main>
   );
 }
