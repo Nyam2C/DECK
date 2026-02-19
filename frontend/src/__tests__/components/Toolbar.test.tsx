@@ -80,7 +80,7 @@ describe("Toolbar — 렌더링", () => {
 
   it("스톱워치 버튼이 표시된다", () => {
     render(<Toolbar />);
-    expect(screen.getByText("⏱")).toBeTruthy();
+    expect(screen.getByText("◷")).toBeTruthy();
   });
 
   it("설정 버튼이 표시된다", () => {
@@ -90,20 +90,20 @@ describe("Toolbar — 렌더링", () => {
 
   it("스톱워치 클릭 시 드롭다운이 열린다", () => {
     render(<Toolbar />);
-    fireEvent.click(screen.getByText("⏱"));
+    fireEvent.click(screen.getByText("◷"));
     expect(screen.getByText("▶ 시작")).toBeTruthy();
   });
 
   it("스톱워치 시작/정지 동작", () => {
     render(<Toolbar />);
-    fireEvent.click(screen.getByText("⏱"));
+    fireEvent.click(screen.getByText("◷"));
     fireEvent.click(screen.getByText("▶ 시작"));
-    expect(screen.getByText("⏸ 정지")).toBeTruthy();
+    expect(screen.getByText("■ 정지")).toBeTruthy();
   });
 
   it("스톱워치 리셋 동작", () => {
     render(<Toolbar />);
-    fireEvent.click(screen.getByText("⏱"));
+    fireEvent.click(screen.getByText("◷"));
     fireEvent.click(screen.getByText("▶ 시작"));
     fireEvent.click(screen.getByText("↺ 리셋"));
     expect(screen.getByText("▶ 시작")).toBeTruthy();

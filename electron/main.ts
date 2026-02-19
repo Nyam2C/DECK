@@ -9,7 +9,9 @@ const isDev = !app.isPackaged;
 const logPath = join(app.getPath("userData"), "deck-debug.log");
 function log(msg: string) {
   const line = `${new Date().toISOString()} ${msg}\n`;
-  try { appendFileSync(logPath, line); } catch {}
+  try {
+    appendFileSync(logPath, line);
+  } catch {}
   console.log(msg);
 }
 let mainWindow: BrowserWindow;
@@ -123,7 +125,6 @@ if (!gotLock) {
     stopBackend();
     log("[quit] cleanup done");
   });
-
 
   // macOS: 독 아이콘 클릭 시 윈도우 복원
   app.on("activate", () => {

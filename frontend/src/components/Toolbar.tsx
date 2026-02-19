@@ -171,7 +171,7 @@ export function Toolbar() {
                     onClick={handleStop}
                     className="px-3 py-1 text-xs border border-dashed border-deck-cyan text-deck-cyan hover:bg-deck-cyan/15 transition-colors cursor-pointer"
                   >
-                    ⏸ 정지
+                    ■ 정지
                   </button>
                 ) : (
                   <button
