@@ -1,10 +1,10 @@
-import { Tray, Menu, type BrowserWindow, nativeImage } from "electron";
+import { app, Tray, Menu, type BrowserWindow, nativeImage } from "electron";
 import { resolve } from "node:path";
 
 let tray: Tray | null = null;
 
 export function createTray(mainWindow: BrowserWindow): void {
-  const iconPath = resolve(__dirname, "../electron/icons/icon.png");
+  const iconPath = resolve(__dirname, "../icons/icon.png");
   const icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
   tray = new Tray(icon);
   tray.setToolTip("DECK");
@@ -27,8 +27,8 @@ export function createTray(mainWindow: BrowserWindow): void {
     {
       label: "종료",
       click: () => {
-        (mainWindow as BrowserWindow & { _forceQuit?: boolean })._forceQuit = true;
-        mainWindow.close();
+        mainWindow.destroy();
+        app.quit();
       },
     },
   ]);

@@ -135,7 +135,7 @@ export function Toolbar() {
         </div>
       )}
 
-      {/* 우측: 버튼 (＋ · ⏱ · ⚙) */}
+      {/* 우측: 버튼 (＋ · ◷ · ⚙) */}
       <div className="flex items-center gap-2 [-webkit-app-region:no-drag]">
         {isMiku && (
           <img src="/sprites/miku-run.gif" alt="" className="miku-sprite h-9 shrink-0 opacity-80" />
@@ -158,7 +158,7 @@ export function Toolbar() {
             title="스톱워치"
             aria-label="스톱워치"
           >
-            ⏱
+            ◷
           </button>
           {swOpen && (
             <div className="absolute right-0 top-full mt-1 bg-deck-panel border border-deck-border p-4 z-50 min-w-[200px]">

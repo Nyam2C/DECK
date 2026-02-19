@@ -6,6 +6,7 @@
       "name": "deck",
       "dependencies": {
         "electron-window-state": "^5.0.3",
+        "node-pty": "^1.1.0",
       },
       "devDependencies": {
         "@testing-library/dom": "^10.4.1",
