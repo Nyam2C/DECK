@@ -135,27 +135,33 @@ export function createServer(options: DeckServerOptions) {
       send(ws, { type: "sync", sessions: activeSessions });
     } else if (presetName) {
       // --preset 모드: 프리셋을 로드하여 전송
-      loadPresets().then((presets) => {
-        const found = presets.find((p) => p.name === presetName);
-        if (found) {
-          send(ws, { type: "restore-session", panels: found.panels, source: "preset" });
-        } else {
-          console.warn(
-            `[DECK] 프리셋 "${presetName}"을 찾을 수 없습니다. 세션 복원으로 대체합니다.`,
-          );
-          loadSession().then((session) => {
-            if (session && session.panels.length > 0) {
-              send(ws, { type: "restore-session", panels: session.panels });
-            }
-          }).catch((e) => console.error("[DECK] 세션 로드 실패:", e));
-        }
-      }).catch((e) => console.error("[DECK] 프리셋 로드 실패:", e));
+      loadPresets()
+        .then((presets) => {
+          const found = presets.find((p) => p.name === presetName);
+          if (found) {
+            send(ws, { type: "restore-session", panels: found.panels, source: "preset" });
+          } else {
+            console.warn(
+              `[DECK] 프리셋 "${presetName}"을 찾을 수 없습니다. 세션 복원으로 대체합니다.`,
+            );
+            loadSession()
+              .then((session) => {
+                if (session && session.panels.length > 0) {
+                  send(ws, { type: "restore-session", panels: session.panels });
+                }
+              })
+              .catch((e) => console.error("[DECK] 세션 로드 실패:", e));
+          }
+        })
+        .catch((e) => console.error("[DECK] 프리셋 로드 실패:", e));
     } else {
-      loadSession().then((session) => {
-        if (session && session.panels.length > 0) {
-          send(ws, { type: "restore-session", panels: session.panels });
-        }
-      }).catch((e) => console.error("[DECK] 세션 로드 실패:", e));
+      loadSession()
+        .then((session) => {
+          if (session && session.panels.length > 0) {
+            send(ws, { type: "restore-session", panels: session.panels });
+          }
+        })
+        .catch((e) => console.error("[DECK] 세션 로드 실패:", e));
     }
 
     ws.on("message", (raw) => {

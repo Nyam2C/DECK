@@ -1,4 +1,4 @@
-# DECK
+<h1><img src="electron/icons/icon.png" width="30" align="center" /> DECK</h1>
 
 멀티 패널 AI 코딩 어시스턴트 터미널.
 
@@ -19,16 +19,16 @@
 
 ## 기술 스택
 
-| 영역 | 기술 |
-|------|------|
-| Runtime | Bun 1.2+ |
-| Language | TypeScript |
-| Frontend | React 19, Vite 6, Tailwind CSS v4, Zustand 5 |
-| Terminal | xterm.js 6, node-pty |
-| Communication | WebSocket (ws) |
-| Desktop | Electron 33 |
-| Lint / Format | OXLint, OXFmt |
-| Test | Vitest |
+| 영역          | 기술                                         |
+| ------------- | -------------------------------------------- |
+| Runtime       | Bun 1.2+                                     |
+| Language      | TypeScript                                   |
+| Frontend      | React 19, Vite 6, Tailwind CSS v4, Zustand 5 |
+| Terminal      | xterm.js 6, node-pty                         |
+| Communication | WebSocket (ws)                               |
+| Desktop       | Electron 33                                  |
+| Lint / Format | OXLint, OXFmt                                |
+| Test          | Vitest                                       |
 
 ## 시작하기
 
@@ -48,23 +48,26 @@ bun run dev
 
 # Electron 앱으로 실행
 bun run electron:dev
+
+# Electron 배포 빌드 (Windows: nsis / macOS: dmg / Linux: AppImage)
+bun run electron:dist
 ```
 
 ## 스크립트
 
-| 명령어 | 설명 |
-|--------|------|
-| `bun run dev` | 개발 서버 실행 (backend + frontend) |
-| `bun run start` | 프로덕션 서버 실행 |
-| `bun run build` | 전체 빌드 |
-| `bun run test` | 테스트 실행 |
-| `bun run test:watch` | 테스트 워치 모드 |
-| `bun run test:coverage` | 커버리지 포함 테스트 |
-| `bun run lint` | OXLint 실행 |
-| `bun run fmt` | OXFmt 포맷팅 |
-| `bun run typecheck` | TypeScript 타입 체크 |
-| `bun run electron:dev` | Electron 개발 모드 |
-| `bun run electron:dist` | Electron 배포 빌드 |
+| 명령어                  | 설명                                |
+| ----------------------- | ----------------------------------- |
+| `bun run dev`           | 개발 서버 실행 (backend + frontend) |
+| `bun run start`         | 프로덕션 서버 실행                  |
+| `bun run build`         | 전체 빌드                           |
+| `bun run test`          | 테스트 실행                         |
+| `bun run test:watch`    | 테스트 워치 모드                    |
+| `bun run test:coverage` | 커버리지 포함 테스트                |
+| `bun run lint`          | OXLint 실행                         |
+| `bun run fmt`           | OXFmt 포맷팅                        |
+| `bun run typecheck`     | TypeScript 타입 체크                |
+| `bun run electron:dev`  | Electron 개발 모드                  |
+| `bun run electron:dist` | Electron 배포 빌드                  |
 
 ## 프로젝트 구조
 
@@ -95,14 +98,14 @@ DECK/
 ┌─────────────────────────────────────────┐
 │  Electron                               │
 │  ┌───────────────────────────────────┐  │
-│  │  React (xterm.js × 4 panels)     │  │
+│  │  React (xterm.js × 4 panels)      │  │
 │  └──────────────┬────────────────────┘  │
-│                 │ WebSocket              │
+│                 │ WebSocket             │
 │  ┌──────────────▼────────────────────┐  │
 │  │  Bun Server                       │  │
-│  │  ┌──────┐ ┌──────┐ ┌──────┐      │  │
-│  │  │ PTY  │ │ PTY  │ │ PTY  │ ...  │  │
-│  │  └──────┘ └──────┘ └──────┘      │  │
+│  │  ┌──────┐ ┌──────┐ ┌──────┐       │  │
+│  │  │ PTY  │ │ PTY  │ │ PTY  │ ...   │  │
+│  │  └──────┘ └──────┘ └──────┘       │  │
 │  └───────────────────────────────────┘  │
 └─────────────────────────────────────────┘
 ```
