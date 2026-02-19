@@ -395,7 +395,10 @@ function PresetsTab() {
                       onChange={(e) => setEditName(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") handleEditSave(preset.name);
-                        if (e.key === "Escape") { setEditingName(null); setEditName(""); }
+                        if (e.key === "Escape") {
+                          setEditingName(null);
+                          setEditName("");
+                        }
                       }}
                       autoFocus
                       className="flex-1 min-w-0 bg-deck-bg border border-dashed border-deck-cyan/50 px-2 py-0.5 text-deck-text font-term text-xs focus:border-deck-cyan outline-none mr-2"
@@ -408,7 +411,10 @@ function PresetsTab() {
                         저장
                       </button>
                       <button
-                        onClick={() => { setEditingName(null); setEditName(""); }}
+                        onClick={() => {
+                          setEditingName(null);
+                          setEditName("");
+                        }}
                         className="px-2 py-0.5 border border-dashed border-deck-border text-deck-dim hover:text-deck-pink hover:border-deck-pink/50 transition-colors"
                       >
                         취소
@@ -429,7 +435,10 @@ function PresetsTab() {
                         로드
                       </button>
                       <button
-                        onClick={() => { setEditingName(preset.name); setEditName(preset.name); }}
+                        onClick={() => {
+                          setEditingName(preset.name);
+                          setEditName(preset.name);
+                        }}
                         className="px-2 py-0.5 border border-dashed border-deck-border text-deck-dim hover:text-deck-cyan hover:border-deck-cyan/50 transition-colors"
                       >
                         편집

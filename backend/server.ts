@@ -9,7 +9,14 @@ import { WebSocketServer, WebSocket } from "ws";
 import { handleMessage } from "./message-handler";
 import { PtyManager } from "./pty-manager";
 import type { ServerMessage, Preset } from "./types";
-import { loadPresets, savePreset, deletePreset, updatePreset, loadSession, saveSession } from "./session-manager";
+import {
+  loadPresets,
+  savePreset,
+  deletePreset,
+  updatePreset,
+  loadSession,
+  saveSession,
+} from "./session-manager";
 
 export interface DeckServerOptions {
   port: number;
@@ -133,7 +140,9 @@ export function createServer(options: DeckServerOptions) {
         if (found) {
           send(ws, { type: "restore-session", panels: found.panels, source: "preset" });
         } else {
-          console.warn(`[DECK] 프리셋 "${presetName}"을 찾을 수 없습니다. 세션 복원으로 대체합니다.`);
+          console.warn(
+            `[DECK] 프리셋 "${presetName}"을 찾을 수 없습니다. 세션 복원으로 대체합니다.`,
+          );
           loadSession().then((session) => {
             if (session && session.panels.length > 0) {
               send(ws, { type: "restore-session", panels: session.panels });

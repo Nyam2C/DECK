@@ -300,7 +300,8 @@ export function PanelSetup({ panelId }: PanelSetupProps) {
       {/* CLI 탭 */}
       <div className="flex gap-0">
         {providerList.map((p, i) => {
-          const key = p.command === "claude" ? "claude" : p.command === "shell" ? "shell" : "custom";
+          const key =
+            p.command === "claude" ? "claude" : p.command === "shell" ? "shell" : "custom";
           const isLast = i === providerList.length - 1;
           return (
             <button

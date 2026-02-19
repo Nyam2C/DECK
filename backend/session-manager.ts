@@ -75,7 +75,8 @@ export function createSessionManager(basePath: string = DECK_DIR) {
 
 // 기본 인스턴스 (프로덕션용)
 const defaultManager = createSessionManager();
-export const { loadPresets, savePreset, deletePreset, updatePreset, loadSession, saveSession } = defaultManager;
+export const { loadPresets, savePreset, deletePreset, updatePreset, loadSession, saveSession } =
+  defaultManager;
 
 /**
  * 지정된 작업 경로에 Claude 대화 기록(.jsonl)이 존재하는지 확인한다.
