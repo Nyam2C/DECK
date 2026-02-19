@@ -1,0 +1,37 @@
+appId: com.deck.app
+productName: DECK
+npmRebuild: false
+
+files:
+  - "electron/dist-electron/**/*"
+  - "electron/icons/**/*"
+  - "backend/dist/**/*"
+  - "frontend/dist/**/*"
+  - "node_modules/**/*"
+  - "package.json"
+  - "!**/__tests__/**"
+  - "!**/coverage/**"
+  - "!**/plan/**"
+  - "!**/demo/**"
+
+asarUnpack:
+  - "backend/dist/**/*"
+  - "frontend/dist/**/*"
+  - "**/node-pty/**"
+
+win:
+  icon: electron/icons/icon.png
+  target: [nsis]
+
+mac:
+  category: public.app-category.developer-tools
+  icon: electron/icons/icon.icns
+  target: [dmg]
+
+linux:
+  category: Development
+  icon: electron/icons/icon.png
+  target: [AppImage]
+
+extraMetadata:
+  main: electron/dist-electron/main.js

@@ -6,7 +6,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const PORT = Number(process.env.DECK_PORT) || 3000;
 const HOSTNAME = "127.0.0.1";
-const STATIC_DIR = resolve(__dirname, "../frontend/dist");
+const STATIC_DIR = process.env.DECK_STATIC_DIR || resolve(__dirname, "../frontend/dist");
 
 // --preset 인자 파싱
 const presetArgIndex = process.argv.indexOf("--preset");

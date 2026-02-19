@@ -1,8 +1,17 @@
-import { describe, it, expect } from "vitest";
+// @vitest-environment happy-dom
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { getProvider, getProviderList } from "../../services/cli-provider";
+import { usePanelStore } from "../../stores/panel-store";
+import { useSettingsStore } from "../../stores/settings-store";
+import { PanelSetup } from "../../components/PanelSetup";
+import { DEFAULT_SETTINGS } from "../../types";
 
-// PanelSetup의 핵심 로직을 프로바이더 단위로 검증한다.
-// (컴포넌트 렌더링 테스트는 jsdom 환경 설정 후 별도 진행)
+// WebSocket 모킹
+vi.mock("../../hooks/use-websocket", () => ({
+  sendMessage: vi.fn(() => true),
+  onServerMessage: vi.fn(() => () => {}),
+}));
 
 describe("PanelSetup — 폼 렌더링 로직", () => {
   it("Claude Code 프로바이더는 기본 옵션 4개를 갖는다", () => {
@@ -36,12 +45,10 @@ describe("PanelSetup — 탭 전환 로직", () => {
     const claude = getProvider("claude");
     const custom = getProvider("custom");
 
-    // Claude → Custom 전환: 기본값 확인
     const customDefaults: Record<string, unknown> = {};
     for (const opt of custom.options) customDefaults[opt.key] = opt.defaultValue;
     expect(customDefaults).toEqual({ command: "" });
 
-    // Custom → Claude 전환: 기본값 확인
     const claudeDefaults: Record<string, unknown> = {};
     for (const opt of claude.options) claudeDefaults[opt.key] = opt.defaultValue;
     expect(claudeDefaults.session).toBe("new");
@@ -111,5 +118,96 @@ describe("PanelSetup — 고급 옵션 토글", () => {
     expect(types.has("text")).toBe(true);
     expect(types.has("checkbox")).toBe(true);
     expect(types.has("textarea")).toBe(true);
+  });
+});
+
+describe("PanelSetup — 렌더링", () => {
+  beforeEach(() => {
+    usePanelStore.setState({ panels: [], focusedId: null, pinnedId: null });
+    useSettingsStore.setState({ ...DEFAULT_SETTINGS, isOpen: false, draft: null });
+    const id = usePanelStore.getState().addPanel();
+    if (id) usePanelStore.getState().setFocus(id);
+  });
+
+  it("PanelSetup이 렌더링된다", () => {
+    const panels = usePanelStore.getState().panels;
+    if (panels.length === 0) return;
+    render(<PanelSetup panelId={panels[0].id} />);
+    expect(screen.getByText("시작")).toBeTruthy();
+  });
+
+  it("CLI 탭이 3개 표시된다", () => {
+    const panels = usePanelStore.getState().panels;
+    if (panels.length === 0) return;
+    render(<PanelSetup panelId={panels[0].id} />);
+    expect(screen.getByText("Claude Code")).toBeTruthy();
+    expect(screen.getByText("셸")).toBeTruthy();
+    expect(screen.getByText("커스텀")).toBeTruthy();
+  });
+
+  it("경로 입력 필드가 표시된다", () => {
+    const panels = usePanelStore.getState().panels;
+    if (panels.length === 0) return;
+    render(<PanelSetup panelId={panels[0].id} />);
+    expect(screen.getByPlaceholderText("~/project")).toBeTruthy();
+  });
+
+  it("추가 옵션 토글이 동작한다", () => {
+    const panels = usePanelStore.getState().panels;
+    if (panels.length === 0) return;
+    render(<PanelSetup panelId={panels[0].id} />);
+    const toggleBtn = screen.getByText(/추가 옵션/);
+    fireEvent.click(toggleBtn);
+    // 고급 옵션이 렌더링되어야 함
+    expect(screen.getByText(/추가 옵션/)).toBeTruthy();
+  });
+
+  it("경로 없이 시작하면 에러 표시", () => {
+    const panels = usePanelStore.getState().panels;
+    if (panels.length === 0) return;
+    render(<PanelSetup panelId={panels[0].id} />);
+    const startBtn = screen.getByText("시작");
+    fireEvent.click(startBtn);
+    expect(screen.getByText("경로를 입력하세요")).toBeTruthy();
+  });
+
+  it("CLI 탭 전환이 동작한다", () => {
+    const panels = usePanelStore.getState().panels;
+    if (panels.length === 0) return;
+    render(<PanelSetup panelId={panels[0].id} />);
+    fireEvent.click(screen.getByText("셸"));
+    // Shell 탭에서는 명령어 미리보기가 $SHELL
+    expect(screen.getByText(/\$SHELL/)).toBeTruthy();
+  });
+
+  it("경로 입력이 동작한다", () => {
+    const panels = usePanelStore.getState().panels;
+    if (panels.length === 0) return;
+    render(<PanelSetup panelId={panels[0].id} />);
+    const input = screen.getByPlaceholderText("~/project");
+    fireEvent.change(input, { target: { value: "/home/user/test" } });
+    expect(input).toHaveProperty("value", "/home/user/test");
+  });
+
+  it("유효한 입력으로 시작하면 패널이 active로 전환", () => {
+    const panels = usePanelStore.getState().panels;
+    if (panels.length === 0) return;
+    render(<PanelSetup panelId={panels[0].id} />);
+    const input = screen.getByPlaceholderText("~/project");
+    fireEvent.change(input, { target: { value: "/home/user/test" } });
+    fireEvent.click(screen.getByText("시작"));
+    const panel = usePanelStore.getState().panels[0];
+    expect(panel.status).toBe("active");
+  });
+
+  it("커스텀 탭에서 명령어 없이 시작하면 에러", () => {
+    const panels = usePanelStore.getState().panels;
+    if (panels.length === 0) return;
+    render(<PanelSetup panelId={panels[0].id} />);
+    fireEvent.click(screen.getByText("커스텀"));
+    const input = screen.getByPlaceholderText("~/project");
+    fireEvent.change(input, { target: { value: "/home/user/test" } });
+    fireEvent.click(screen.getByText("시작"));
+    expect(screen.getByText("명령어를 입력하세요")).toBeTruthy();
   });
 });

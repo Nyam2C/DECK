@@ -25,7 +25,12 @@ export function Settings() {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      aria-label="설정"
+    >
       {/* 백드롭 */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeSettings} />
 

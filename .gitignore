@@ -4,3 +4,5 @@ DECK.md
 node_modules/
 dist/
 coverage/
+dist-electron/
+release/

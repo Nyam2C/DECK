@@ -38,4 +38,29 @@ describe("isLeaderKey", () => {
     const e = makeKeyEvent({ key: " ", code: "Space", altKey: true });
     expect(isLeaderKey(e, "Alt+Space")).toBe(true);
   });
+
+  it("Meta 키를 지원한다", () => {
+    const e = makeKeyEvent({ key: "d", code: "KeyD", metaKey: true });
+    expect(isLeaderKey(e, "Meta+d")).toBe(true);
+  });
+
+  it("Meta 키 없이 Meta 설정은 실패", () => {
+    const e = makeKeyEvent({ key: "d", code: "KeyD" });
+    expect(isLeaderKey(e, "Meta+d")).toBe(false);
+  });
+
+  it("Ctrl+Shift 조합을 지원한다", () => {
+    const e = makeKeyEvent({ key: "p", code: "KeyP", ctrlKey: true, shiftKey: true });
+    expect(isLeaderKey(e, "Ctrl+Shift+p")).toBe(true);
+  });
+
+  it("code 기반으로도 매칭된다", () => {
+    const e = makeKeyEvent({ key: "", code: "space", ctrlKey: true });
+    expect(isLeaderKey(e, "Ctrl+space")).toBe(true);
+  });
+
+  it("Alt 키 없이 Alt 설정은 실패", () => {
+    const e = makeKeyEvent({ key: "x", code: "KeyX", ctrlKey: true });
+    expect(isLeaderKey(e, "Alt+x")).toBe(false);
+  });
 });

@@ -12,7 +12,7 @@ interface StopwatchState {
   lastTick: number;
 }
 
-function loadStopwatch(): StopwatchState {
+export function loadStopwatch(): StopwatchState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { elapsed: 0, running: false, lastTick: 0 };
@@ -28,7 +28,7 @@ function loadStopwatch(): StopwatchState {
   }
 }
 
-function saveStopwatch(state: StopwatchState): void {
+export function saveStopwatch(state: StopwatchState): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
@@ -145,6 +145,7 @@ export function Toolbar() {
           disabled={isMaxPanels}
           className="border border-dashed border-deck-cyan text-deck-cyan px-3 py-1 text-sm hover:shadow-[0_0_12px_#39C5BB] transition-shadow cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:shadow-none"
           title="새 패널 추가"
+          aria-label="새 패널 추가"
         >
           ＋
         </button>
@@ -155,6 +156,7 @@ export function Toolbar() {
               running ? "shadow-[0_0_12px_#39C5BB]" : "hover:shadow-[0_0_12px_#39C5BB]"
             }`}
             title="스톱워치"
+            aria-label="스톱워치"
           >
             ⏱
           </button>
@@ -193,6 +195,7 @@ export function Toolbar() {
           onClick={openSettings}
           className="border border-dashed border-deck-pink text-deck-pink px-3 py-1 text-sm hover:shadow-[0_0_12px_#FFB7C5] transition-shadow cursor-pointer"
           title="설정"
+          aria-label="설정"
         >
           ⚙
         </button>
