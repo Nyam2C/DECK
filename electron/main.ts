@@ -57,6 +57,7 @@ if (!gotLock) {
       minWidth: 800,
       minHeight: 600,
       frame: false,
+      icon: resolve(__dirname, "../icons/icon.png"),
       backgroundColor: "#0a0a14",
       webPreferences: {
         nodeIntegration: false,

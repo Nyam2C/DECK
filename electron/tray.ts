@@ -4,8 +4,8 @@ import { resolve } from "node:path";
 let tray: Tray | null = null;
 
 export function createTray(mainWindow: BrowserWindow): void {
-  const iconPath = resolve(__dirname, "../icons/icon.png");
-  const icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
+  const iconPath = resolve(__dirname, "../icons/tray.png");
+  const icon = nativeImage.createFromPath(iconPath);
   tray = new Tray(icon);
   tray.setToolTip("DECK");
 
