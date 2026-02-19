@@ -29,6 +29,7 @@ vi.mock("../session-manager", () => ({
   loadPresets: vi.fn(() => Promise.resolve(mockPresets)),
   savePreset: vi.fn(() => Promise.resolve()),
   deletePreset: vi.fn(() => Promise.resolve()),
+  updatePreset: vi.fn(() => Promise.resolve()),
   loadSession: vi.fn(() => Promise.resolve(mockSession)),
   saveSession: vi.fn(() => Promise.resolve()),
 }));
@@ -205,6 +206,29 @@ describe("createServer", () => {
     expect(res.status).toBe(200);
   });
 
+  it("PUT /api/presets/:name으로 프리셋을 수정한다", async () => {
+    await waitForServer();
+    const res = await fetch(`http://127.0.0.1:${PORT}/api/presets/dev`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "dev-renamed",
+        panels: [{ cli: "claude", path: "/home", options: "--model opus" }],
+        createdAt: "2025-01-01",
+      }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("PUT /api/presets/:name에 잘못된 JSON 시 400을 반환한다", async () => {
+    await waitForServer();
+    const res = await fetch(`http://127.0.0.1:${PORT}/api/presets/dev`, {
+      method: "PUT",
+      body: "invalid",
+    });
+    expect(res.status).toBe(400);
+  });
+
   it("GET /api/session이 세션 데이터를 반환한다", async () => {
     await waitForServer();
     const res = await fetch(`http://127.0.0.1:${PORT}/api/session`);
@@ -232,6 +256,44 @@ describe("createServer", () => {
     expect(parsed.panels[0].cli).toBe("claude");
 
     ws.close();
+  });
+
+  // ─── 프리셋 CLI 시작 (--preset) ───
+
+  it("preset 옵션으로 서버 생성 시 WS 연결하면 restore-session(source:preset)을 전송한다", async () => {
+    // 별도 서버 인스턴스 생성 (preset 옵션 포함)
+    const PRESET_PORT = 13580;
+    const presetResult = createServer({
+      port: PRESET_PORT,
+      hostname: "127.0.0.1",
+      staticDir: "/tmp/dist",
+      preset: "dev",
+    });
+
+    await new Promise<void>((resolve) => {
+      if (presetResult.server.listening) return resolve();
+      presetResult.server.once("listening", resolve);
+    });
+
+    const ws = new WebSocket(`ws://127.0.0.1:${PRESET_PORT}/ws`);
+    const msgPromise = new Promise<string>((resolve) => {
+      ws.on("message", (data) => resolve(data.toString()));
+    });
+    await new Promise<void>((resolve, reject) => {
+      ws.on("open", resolve);
+      ws.on("error", reject);
+    });
+
+    const parsed = JSON.parse(await msgPromise);
+    expect(parsed.type).toBe("restore-session");
+    expect(parsed.source).toBe("preset");
+    expect(parsed.panels).toHaveLength(1);
+
+    ws.close();
+    presetResult.ptyManager.killAll();
+    presetResult.wss.clients.forEach((c) => c.terminate());
+    presetResult.server.closeAllConnections();
+    await new Promise<void>((resolve) => presetResult.server.close(() => resolve()));
   });
 
   // 헬퍼

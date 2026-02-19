@@ -55,6 +55,31 @@ describe("session-manager", () => {
     expect(loaded[0].panels[0].cli).toBe("b");
   });
 
+  it("프리셋 이름을 변경할 수 있다", async () => {
+    const preset: Preset = {
+      name: "old-name",
+      panels: [{ cli: "claude", path: "/tmp", options: "" }],
+      createdAt: new Date().toISOString(),
+    };
+    await manager.savePreset(preset);
+    await manager.updatePreset("old-name", { ...preset, name: "new-name" });
+    const loaded = await manager.loadPresets();
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0].name).toBe("new-name");
+  });
+
+  it("존재하지 않는 프리셋을 updatePreset하면 추가된다", async () => {
+    const preset: Preset = {
+      name: "added",
+      panels: [],
+      createdAt: new Date().toISOString(),
+    };
+    await manager.updatePreset("nonexistent", preset);
+    const loaded = await manager.loadPresets();
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0].name).toBe("added");
+  });
+
   it("프리셋 삭제 후 목록에서 제거된다", async () => {
     await manager.savePreset({
       name: "del",

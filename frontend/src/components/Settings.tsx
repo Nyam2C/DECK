@@ -288,6 +288,8 @@ function PresetsTab() {
   const [presets, setPresets] = useState<PresetData[]>([]);
   const [newName, setNewName] = useState("");
   const [loading, setLoading] = useState(true);
+  const [editingName, setEditingName] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
   const closeSettings = useSettingsStore((s) => s.closeSettings);
 
   async function fetchPresets() {
@@ -326,6 +328,21 @@ function PresetsTab() {
 
   async function handleDelete(name: string) {
     await fetch(`/api/presets/${encodeURIComponent(name)}`, { method: "DELETE" });
+    await fetchPresets();
+  }
+
+  async function handleEditSave(originalName: string) {
+    const trimmed = editName.trim();
+    if (!trimmed) return;
+    const preset = presets.find((p) => p.name === originalName);
+    if (!preset) return;
+    await fetch(`/api/presets/${encodeURIComponent(originalName)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...preset, name: trimmed }),
+    });
+    setEditingName(null);
+    setEditName("");
     await fetchPresets();
   }
 
@@ -370,24 +387,71 @@ function PresetsTab() {
           <div className="divide-y divide-dotted divide-deck-border">
             {presets.map((preset) => (
               <div key={preset.name} className="flex items-center justify-between px-3 py-2">
-                <div className="min-w-0">
-                  <div className="text-deck-text truncate">{preset.name}</div>
-                  <div className="text-deck-dim text-[10px]">{preset.panels.length}개 패널</div>
-                </div>
-                <div className="flex gap-1.5 shrink-0">
-                  <button
-                    onClick={() => handleLoad(preset)}
-                    className="px-2 py-0.5 border border-deck-cyan/50 text-deck-cyan hover:bg-deck-cyan/15 transition-colors"
-                  >
-                    로드
-                  </button>
-                  <button
-                    onClick={() => handleDelete(preset.name)}
-                    className="px-2 py-0.5 border border-dashed border-deck-border text-deck-dim hover:text-deck-pink hover:border-deck-pink/50 transition-colors"
-                  >
-                    삭제
-                  </button>
-                </div>
+                {editingName === preset.name ? (
+                  <>
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleEditSave(preset.name);
+                        if (e.key === "Escape") {
+                          setEditingName(null);
+                          setEditName("");
+                        }
+                      }}
+                      autoFocus
+                      className="flex-1 min-w-0 bg-deck-bg border border-dashed border-deck-cyan/50 px-2 py-0.5 text-deck-text font-term text-xs focus:border-deck-cyan outline-none mr-2"
+                    />
+                    <div className="flex gap-1.5 shrink-0">
+                      <button
+                        onClick={() => handleEditSave(preset.name)}
+                        className="px-2 py-0.5 border border-deck-cyan/50 text-deck-cyan hover:bg-deck-cyan/15 transition-colors"
+                      >
+                        저장
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingName(null);
+                          setEditName("");
+                        }}
+                        className="px-2 py-0.5 border border-dashed border-deck-border text-deck-dim hover:text-deck-pink hover:border-deck-pink/50 transition-colors"
+                      >
+                        취소
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="min-w-0">
+                      <div className="text-deck-text truncate">{preset.name}</div>
+                      <div className="text-deck-dim text-[10px]">{preset.panels.length}개 패널</div>
+                    </div>
+                    <div className="flex gap-1.5 shrink-0">
+                      <button
+                        onClick={() => handleLoad(preset)}
+                        className="px-2 py-0.5 border border-deck-cyan/50 text-deck-cyan hover:bg-deck-cyan/15 transition-colors"
+                      >
+                        로드
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingName(preset.name);
+                          setEditName(preset.name);
+                        }}
+                        className="px-2 py-0.5 border border-dashed border-deck-border text-deck-dim hover:text-deck-cyan hover:border-deck-cyan/50 transition-colors"
+                      >
+                        편집
+                      </button>
+                      <button
+                        onClick={() => handleDelete(preset.name)}
+                        className="px-2 py-0.5 border border-dashed border-deck-border text-deck-dim hover:text-deck-pink hover:border-deck-pink/50 transition-colors"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>

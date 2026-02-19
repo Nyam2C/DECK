@@ -9,12 +9,20 @@ import { WebSocketServer, WebSocket } from "ws";
 import { handleMessage } from "./message-handler";
 import { PtyManager } from "./pty-manager";
 import type { ServerMessage, Preset } from "./types";
-import { loadPresets, savePreset, deletePreset, loadSession, saveSession } from "./session-manager";
+import {
+  loadPresets,
+  savePreset,
+  deletePreset,
+  updatePreset,
+  loadSession,
+  saveSession,
+} from "./session-manager";
 
 export interface DeckServerOptions {
   port: number;
   hostname: string;
   staticDir: string;
+  preset?: string;
 }
 
 const MIME_TYPES: Record<string, string> = {
@@ -32,7 +40,7 @@ const MIME_TYPES: Record<string, string> = {
 };
 
 export function createServer(options: DeckServerOptions) {
-  const { port, hostname, staticDir } = options;
+  const { port, hostname, staticDir, preset: presetName } = options;
 
   let activeWs: WebSocket | null = null;
 
@@ -86,6 +94,18 @@ export function createServer(options: DeckServerOptions) {
       res.writeHead(200).end("OK");
       return;
     }
+    if (url.pathname.startsWith("/api/presets/") && req.method === "PUT") {
+      const originalName = decodeURIComponent(url.pathname.slice("/api/presets/".length));
+      const body = await readBody(req);
+      try {
+        const preset = JSON.parse(body) as Preset;
+        await updatePreset(originalName, preset);
+        res.writeHead(200).end("OK");
+      } catch {
+        res.writeHead(400).end("Bad Request");
+      }
+      return;
+    }
     if (url.pathname === "/api/session" && req.method === "GET") {
       const session = await loadSession();
       res.writeHead(200, { "Content-Type": "application/json" });
@@ -113,6 +133,23 @@ export function createServer(options: DeckServerOptions) {
     const activeSessions = ptyManager.getActiveSessions();
     if (activeSessions.length > 0) {
       send(ws, { type: "sync", sessions: activeSessions });
+    } else if (presetName) {
+      // --preset 모드: 프리셋을 로드하여 전송
+      loadPresets().then((presets) => {
+        const found = presets.find((p) => p.name === presetName);
+        if (found) {
+          send(ws, { type: "restore-session", panels: found.panels, source: "preset" });
+        } else {
+          console.warn(
+            `[DECK] 프리셋 "${presetName}"을 찾을 수 없습니다. 세션 복원으로 대체합니다.`,
+          );
+          loadSession().then((session) => {
+            if (session && session.panels.length > 0) {
+              send(ws, { type: "restore-session", panels: session.panels });
+            }
+          });
+        }
+      });
     } else {
       loadSession().then((session) => {
         if (session && session.panels.length > 0) {

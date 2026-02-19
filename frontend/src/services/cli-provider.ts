@@ -234,9 +234,18 @@ export const customProvider: CLIProvider = {
   hookSupported: false,
 };
 
+export const shellProvider: CLIProvider = {
+  name: "셸",
+  command: "shell",
+  options: [],
+  buildCommand: () => "",
+  hookSupported: false,
+};
+
 const providers: Record<string, CLIProvider> = {
   claude: claudeCodeProvider,
   custom: customProvider,
+  shell: shellProvider,
 };
 
 export function getProvider(cli: string): CLIProvider {
@@ -244,7 +253,7 @@ export function getProvider(cli: string): CLIProvider {
 }
 
 export function getProviderList(): CLIProvider[] {
-  return [claudeCodeProvider, customProvider];
+  return [claudeCodeProvider, shellProvider, customProvider];
 }
 
 /**

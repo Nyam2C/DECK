@@ -20,7 +20,7 @@ export type ServerMessage =
   | { type: "error"; panelId: string; message: string }
   | { type: "hook-notify"; panelId: string; message: string }
   | { type: "hook-status"; panelId: string; connected: boolean }
-  | { type: "restore-session"; panels: PresetPanel[] }
+  | { type: "restore-session"; panels: PresetPanel[]; source?: "preset" | "session" }
   | { type: "sync"; sessions: Array<{ id: string; cli: string; cwd: string; options: string }> };
 
 export type PanelState = "active" | "idle" | "input";
