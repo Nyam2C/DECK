@@ -12,7 +12,10 @@ function splitArgs(s: string): string[] {
   let current = "";
   let inQuote = false;
   for (const ch of s) {
-    if (ch === '"') { inQuote = !inQuote; continue; }
+    if (ch === '"') {
+      inQuote = !inQuote;
+      continue;
+    }
     if (!inQuote && /\s/.test(ch)) {
       if (current) args.push(current);
       current = "";

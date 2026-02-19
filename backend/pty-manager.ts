@@ -137,6 +137,7 @@ export class PtyManager {
   kill(id: string): void {
     const session = this.sessions.get(id);
     if (!session) return; // 이미 종료된 경우 무시
+    this.killedByBulk.add(id);
     session.pty.kill();
     this.sessions.delete(id);
     this.outputBuffers.delete(id);

@@ -7,6 +7,7 @@ export function Settings() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
   const [saved, setSaved] = useState(false);
   const closeSettings = useSettingsStore((s) => s.closeSettings);
+  const commitDraft = useSettingsStore((s) => s.commitDraft);
 
   // ESC 키로 닫기
   useEffect(() => {
@@ -73,6 +74,7 @@ export function Settings() {
         <div className="flex items-center justify-center gap-4 px-4 py-3 border-t-2 border-deck-cyan/20 bg-deck-bg/40">
           <button
             onClick={() => {
+              commitDraft();
               setSaved(true);
               setTimeout(() => setSaved(false), 1500);
             }}
@@ -100,9 +102,13 @@ const THEME_OPTIONS: { id: ThemeId; label: string; desc: string }[] = [
 ];
 
 function GeneralTab() {
-  const { fontSize, defaultPath, startBehavior, port, scrollback, theme, updateSettings } =
-    useSettingsStore();
+  const draft = useSettingsStore((s) => s.draft);
+  const updateDraft = useSettingsStore((s) => s.updateDraft);
   const fontSizes = [12, 14, 16, 18, 20];
+
+  if (!draft) return null;
+
+  const { fontSize, defaultPath, startBehavior, port, scrollback, theme } = draft;
 
   return (
     <div className="space-y-4 text-xs">
@@ -112,7 +118,7 @@ function GeneralTab() {
           {THEME_OPTIONS.map((t) => (
             <button
               key={t.id}
-              onClick={() => updateSettings({ theme: t.id })}
+              onClick={() => updateDraft({ theme: t.id })}
               className={`px-3 py-1.5 text-left cursor-pointer transition-all ${
                 theme === t.id
                   ? "bg-deck-cyan/15 border border-deck-cyan/50 text-deck-cyan shadow-[0_0_6px_#39C5BB33]"
@@ -131,7 +137,7 @@ function GeneralTab() {
           {fontSizes.map((size) => (
             <span
               key={size}
-              onClick={() => updateSettings({ fontSize: size })}
+              onClick={() => updateDraft({ fontSize: size })}
               className={`px-2.5 py-1 cursor-pointer transition-colors ${
                 fontSize === size
                   ? "bg-deck-cyan/15 border border-deck-cyan/50 text-deck-cyan shadow-[0_0_6px_#39C5BB33]"
@@ -148,7 +154,7 @@ function GeneralTab() {
         <input
           type="text"
           value={defaultPath}
-          onChange={(e) => updateSettings({ defaultPath: e.target.value })}
+          onChange={(e) => updateDraft({ defaultPath: e.target.value })}
           placeholder="~/project"
           className="w-full bg-deck-bg border border-dashed border-deck-border px-2 py-1.5 text-deck-text font-term text-xs focus:border-deck-cyan/50 outline-none"
         />
@@ -174,7 +180,7 @@ function GeneralTab() {
                 className={
                   startBehavior === opt ? "text-deck-cyan" : "text-deck-dim hover:text-deck-text"
                 }
-                onClick={() => updateSettings({ startBehavior: opt })}
+                onClick={() => updateDraft({ startBehavior: opt })}
               >
                 {opt === "empty" ? "빈 상태로 시작" : "이전 상태 복원"}
               </span>
@@ -191,7 +197,7 @@ function GeneralTab() {
           max={65535}
           onChange={(e) => {
             const v = Number(e.target.value);
-            if (v >= 1024 && v <= 65535) updateSettings({ port: v });
+            if (v >= 1024 && v <= 65535) updateDraft({ port: v });
           }}
           className="w-28 bg-deck-bg border border-dashed border-deck-border px-2 py-1.5 text-deck-text font-term text-xs focus:border-deck-cyan/50 outline-none"
         />
@@ -207,7 +213,7 @@ function GeneralTab() {
           step={1000}
           onChange={(e) => {
             const v = Number(e.target.value);
-            if (v >= 1000 && v <= 50000) updateSettings({ scrollback: v });
+            if (v >= 1000 && v <= 50000) updateDraft({ scrollback: v });
           }}
           className="w-28 bg-deck-bg border border-dashed border-deck-border px-2 py-1.5 text-deck-text font-term text-xs focus:border-deck-cyan/50 outline-none"
         />
