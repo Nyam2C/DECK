@@ -33,7 +33,7 @@ jobs:
         run: bun run build
 
       - name: Build Electron
-        run: tsc -p electron/tsconfig.json
+        run: npx tsc -p electron/tsconfig.json
 
       - name: Package app
         run: npx electron-builder --${{ matrix.target }}
