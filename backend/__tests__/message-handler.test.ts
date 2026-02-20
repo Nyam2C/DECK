@@ -8,6 +8,12 @@ vi.mock("../session-manager", () => ({
   hasClaudeConversations: vi.fn().mockResolvedValue(true),
 }));
 
+vi.mock("../wsl", () => ({
+  isWindows: false,
+  toWslPath: (p: string) => p,
+  wrapForWsl: (command: string, args: string[], cwd: string) => ({ command, args, cwd }),
+}));
+
 function mockPtyManager(overrides = {}): PtyManager {
   return {
     create: vi.fn().mockReturnValue("test-id"),

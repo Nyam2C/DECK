@@ -14,6 +14,12 @@ vi.mock("node:fs/promises", () => ({
   chmod: mockChmod,
 }));
 
+vi.mock("../wsl", () => ({
+  isWindows: false,
+  getWslHomedir: () => "/home/user",
+  wslExec: vi.fn(),
+}));
+
 import { checkHook, registerHook } from "../hook";
 
 beforeEach(() => {

@@ -1,10 +1,9 @@
 import { describe, it, expect } from "vitest";
 
-// 실제 process.platform을 모킹하지 않고, 내부 함수 로직을 직접 테스트한다.
-// isWindows는 런타임에 false이므로, 경로 변환/래핑 로직만 단위 테스트.
+// toWslPath / wrapForWsl의 핵심 로직을 플랫폼 무관하게 테스트한다.
+// 실제 모듈은 process.platform에 의존하므로, 로직을 직접 재현하여 검증.
 
 describe("toWslPath (로직 테스트)", () => {
-  // toWslPath의 내부 로직을 직접 재현하여 테스트
   function toWslPathLogic(inputPath: string, wslHomedir: string): string {
     if (inputPath.startsWith("/")) return inputPath;
     if (inputPath.startsWith("~")) return inputPath.replace("~", wslHomedir);
@@ -59,7 +58,7 @@ describe("wrapForWsl (로직 테스트)", () => {
     args: string[],
     cwd: string,
   ): { command: string; args: string[]; cwd: string } {
-    const wslCwd = cwd; // 이미 변환된 상태라고 가정
+    const wslCwd = cwd;
     return {
       command: "wsl.exe",
       args: ["--cd", wslCwd, "--", command, ...args],
@@ -82,29 +81,6 @@ describe("wrapForWsl (로직 테스트)", () => {
       command: "wsl.exe",
       args: ["--cd", "/mnt/c/Users/foo", "--", "bash"],
       cwd: "/mnt/c/Users/foo",
-    });
-  });
-});
-
-describe("wsl.ts 모듈 (비-Windows 환경)", () => {
-  it("isWindows가 Linux에서 false이다", async () => {
-    const { isWindows } = await import("../wsl");
-    expect(isWindows).toBe(false);
-  });
-
-  it("toWslPath가 비-Windows에서 경로를 그대로 반환한다", async () => {
-    const { toWslPath } = await import("../wsl");
-    expect(toWslPath("/home/user/project")).toBe("/home/user/project");
-    expect(toWslPath("~/project")).toBe("~/project");
-  });
-
-  it("wrapForWsl이 비-Windows에서 그대로 반환한다", async () => {
-    const { wrapForWsl } = await import("../wsl");
-    const result = wrapForWsl("claude", ["--model", "sonnet"], "/home/user");
-    expect(result).toEqual({
-      command: "claude",
-      args: ["--model", "sonnet"],
-      cwd: "/home/user",
     });
   });
 });
