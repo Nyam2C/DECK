@@ -7,7 +7,7 @@ let backendProcess: ChildProcess | null = null;
 const PORT = 3000;
 const HEALTH_URL = `http://127.0.0.1:${PORT}/api/presets`;
 
-function waitForBackend(maxAttempts = 50, interval = 200): Promise<void> {
+function waitForBackend(maxAttempts = 150, interval = 200): Promise<void> {
   return new Promise((resolve, reject) => {
     let attempts = 0;
     const timer = setInterval(() => {
