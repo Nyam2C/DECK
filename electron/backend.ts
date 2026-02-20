@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import http from "node:http";
 
 let backendProcess: ChildProcess | null = null;
+let logFn: (msg: string) => void = console.log;
 
 const PORT = 3000;
 const HEALTH_URL = `http://127.0.0.1:${PORT}/api/presets`;
@@ -29,7 +30,9 @@ function waitForBackend(maxAttempts = 150, interval = 200): Promise<void> {
   });
 }
 
-export function startBackend(): Promise<void> {
+export function startBackend(log?: (msg: string) => void): Promise<void> {
+  if (log) logFn = log;
+
   const appRoot = resolve(__dirname, "../..");
   let entryPath = resolve(appRoot, "backend/dist/index.js");
   let staticDir = resolve(appRoot, "frontend/dist");
@@ -37,6 +40,10 @@ export function startBackend(): Promise<void> {
   // asar 내부 파일은 자식 프로세스에서 접근 불가 → unpacked 경로로 변환
   entryPath = entryPath.replace("app.asar", "app.asar.unpacked");
   staticDir = staticDir.replace("app.asar", "app.asar.unpacked");
+
+  logFn(`[backend] execPath=${process.execPath}`);
+  logFn(`[backend] entryPath=${entryPath}`);
+  logFn(`[backend] staticDir=${staticDir}`);
 
   backendProcess = spawn(process.execPath, [entryPath], {
     stdio: "pipe",
@@ -49,11 +56,15 @@ export function startBackend(): Promise<void> {
   });
 
   backendProcess.stdout?.on("data", (data: Buffer) => {
-    console.log(`[backend] ${data.toString().trim()}`);
+    logFn(`[backend:stdout] ${data.toString().trim()}`);
   });
 
   backendProcess.stderr?.on("data", (data: Buffer) => {
-    console.error(`[backend] ${data.toString().trim()}`);
+    logFn(`[backend:stderr] ${data.toString().trim()}`);
+  });
+
+  backendProcess.on("exit", (code) => {
+    logFn(`[backend] process exited with code ${code}`);
   });
 
   return waitForBackend();

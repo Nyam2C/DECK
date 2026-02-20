@@ -38,7 +38,7 @@ if (!gotLock) {
     if (!isDev) {
       try {
         log("[backend] starting...");
-        await startBackend();
+        await startBackend(log);
         log("[backend] started OK");
       } catch (err) {
         log(`[backend] FAILED: ${err}`);
