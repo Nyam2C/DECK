@@ -75,13 +75,8 @@ export function useTerminal({ panelId, containerRef }: UseTerminalOptions): void
         return true;
       }
 
-      // Ctrl+V: 클립보드에서 붙여넣기
-      if (domEvent.ctrlKey && domEvent.key === "v") {
-        navigator.clipboard.readText().then((text) => {
-          if (text) sendMessage({ type: "input", panelId, data: text });
-        });
-        return false;
-      }
+      // Ctrl+V: xterm.js 기본 paste 처리에 위임
+      if (domEvent.ctrlKey && domEvent.key === "v") return true;
 
       return true;
     });
