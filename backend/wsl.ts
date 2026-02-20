@@ -58,9 +58,17 @@ export function wrapForWsl(
   if (!isWindows) return { command, args, cwd };
 
   const wslCwd = toWslPath(cwd);
+  // login shell로 실행하여 PATH 등 사용자 환경을 로딩.
+  // --cd는 conpty에서 무시될 수 있으므로 cd로 직접 이동.
+  const q = (s: string) => `'${s.replace(/'/g, "'\\''")}'`;
+  const argsStr = args.map(q).join(" ");
+  const innerCmd =
+    args.length > 0
+      ? `cd ${q(wslCwd)} && exec ${command} ${argsStr}`
+      : `cd ${q(wslCwd)} && exec ${command}`;
   return {
     command: "wsl.exe",
-    args: ["--cd", wslCwd, "--", command, ...args],
+    args: ["--", "bash", "-lc", innerCmd],
     cwd: wslCwd,
   };
 }

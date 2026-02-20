@@ -57,9 +57,32 @@ export function useTerminal({ panelId, containerRef }: UseTerminalOptions): void
     terminal.loadAddon(fitAddon);
     terminal.open(container);
 
-    // Leader Key가 xterm에 전달되지 않도록 가로채기
+    // 키 이벤트 가로채기
     terminal.attachCustomKeyEventHandler((domEvent) => {
+      // Leader Key
       if (isLeaderKey(domEvent, useSettingsStore.getState().leaderKey)) return false;
+
+      if (domEvent.type !== "keydown") return true;
+
+      // Ctrl+C: 선택 텍스트가 있으면 복사, 없으면 ^C 전달
+      if (domEvent.ctrlKey && domEvent.key === "c") {
+        const selection = terminal.getSelection();
+        if (selection) {
+          navigator.clipboard.writeText(selection);
+          terminal.clearSelection();
+          return false;
+        }
+        return true;
+      }
+
+      // Ctrl+V: 클립보드에서 붙여넣기
+      if (domEvent.ctrlKey && domEvent.key === "v") {
+        navigator.clipboard.readText().then((text) => {
+          if (text) sendMessage({ type: "input", panelId, data: text });
+        });
+        return false;
+      }
+
       return true;
     });
 
