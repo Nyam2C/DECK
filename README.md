@@ -36,6 +36,7 @@
 
 - [Bun](https://bun.sh) 1.2+
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)
+- Windows: [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (node-pty 네이티브 빌드에 필요)
 
 ### 설치 및 실행
 
@@ -48,10 +49,11 @@ bun run dev
 
 # Electron 앱으로 실행
 bun run electron:dev
-
-# Electron 배포 빌드 (Windows: nsis / macOS: dmg / Linux: AppImage)
-bun run electron:dist
 ```
+
+### Windows 설치
+
+[GitHub Releases](../../releases)에서 최신 `.exe` 인스톨러를 다운로드하여 실행하면 설치됩니다. 설치 후에는 Bun이나 Node 없이 단독 실행 가능합니다.
 
 ## 스크립트
 
