@@ -3,6 +3,7 @@ import type { PtyManager } from "./pty-manager";
 import { autocomplete } from "./directory";
 import { checkHook, registerHook } from "./hook";
 import { saveSession, hasClaudeConversations } from "./session-manager";
+import { isWindows, wrapForWsl, toWslPath } from "./wsl";
 
 type SendFn = (msg: ServerMessage) => void;
 
@@ -54,7 +55,7 @@ export async function handleMessage(
 
         // shell → 실제 셸 명령어로 치환
         if (cli === "shell") {
-          cli = process.env.SHELL || "/bin/sh";
+          cli = isWindows ? "bash" : process.env.SHELL || "/bin/sh";
         }
 
         // Claude CLI + -r: 대화 기록이 없으면 -r 제거
@@ -66,10 +67,12 @@ export async function handleMessage(
         }
 
         const args = options ? splitArgs(options) : [];
+        const cwd = toWslPath(msg.path);
+        const wrapped = wrapForWsl(cli, args, cwd);
         const panelId = ptyManager.create(
-          cli,
-          args,
-          msg.path,
+          wrapped.command,
+          wrapped.args,
+          wrapped.cwd,
           80,
           24,
           msg.panelId,

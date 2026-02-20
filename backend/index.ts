@@ -2,6 +2,14 @@ import { createServer } from "./server";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
+// Windows에서 DECK_PANEL_ID, CLAUDECODE 환경변수가 WSL로 전달되도록 보장
+if (process.platform === "win32") {
+  const existing = process.env.WSLENV || "";
+  process.env.WSLENV = existing
+    ? `${existing}:DECK_PANEL_ID/u:CLAUDECODE/u`
+    : "DECK_PANEL_ID/u:CLAUDECODE/u";
+}
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const PORT = Number(process.env.DECK_PORT) || 3000;

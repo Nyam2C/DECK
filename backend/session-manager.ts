@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import type { Preset, PresetPanel, SessionState } from "./types";
+import { isWindows, getWslHomedir, wslExec } from "./wsl";
 
 const DECK_DIR = join(homedir(), ".deck");
 
@@ -85,6 +86,18 @@ export const { loadPresets, savePreset, deletePreset, updatePreset, loadSession,
  */
 export async function hasClaudeConversations(cwd: string): Promise<boolean> {
   const encoded = cwd.replace(/[^a-zA-Z0-9._-]/g, "-");
+
+  if (isWindows) {
+    try {
+      const wslHome = getWslHomedir();
+      const projectDir = `${wslHome}/.claude/projects/${encoded}`;
+      const output = await wslExec(`ls '${projectDir.replace(/'/g, "'\\''")}'`);
+      return output.split("\n").some((e) => e.endsWith(".jsonl"));
+    } catch {
+      return false;
+    }
+  }
+
   const projectDir = join(homedir(), ".claude", "projects", encoded);
   try {
     const entries = await readdir(projectDir);

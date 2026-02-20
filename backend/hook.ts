@@ -1,9 +1,18 @@
 import { readFile, writeFile, mkdir, chmod } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
+import { isWindows, getWslHomedir, wslExec } from "./wsl";
 
-const SETTINGS_PATH = join(homedir(), ".claude", "settings.json");
-const SCRIPT_PATH = join(homedir(), ".claude", "hooks", "deck-notify.sh");
+/** WSL 또는 로컬의 ~/.claude 경로를 반환한다. */
+function getSettingsPath(): string {
+  if (isWindows) return `${getWslHomedir()}/.claude/settings.json`;
+  return join(homedir(), ".claude", "settings.json");
+}
+
+function getScriptPath(): string {
+  if (isWindows) return `${getWslHomedir()}/.claude/hooks/deck-notify.sh`;
+  return join(homedir(), ".claude", "hooks", "deck-notify.sh");
+}
 
 /** DECK 훅 식별 키워드 */
 const DECK_MARKER = "deck-notify";
@@ -30,9 +39,20 @@ INPUT=$(dd bs=65536 count=1 2>/dev/null)
 
 /** 훅 스크립트 파일을 생성/갱신한다. */
 async function writeScript(port: number): Promise<void> {
-  await mkdir(dirname(SCRIPT_PATH), { recursive: true });
-  await writeFile(SCRIPT_PATH, buildScript(port), "utf-8");
-  await chmod(SCRIPT_PATH, 0o755);
+  const scriptPath = getScriptPath();
+
+  if (isWindows) {
+    const dirPath = scriptPath.substring(0, scriptPath.lastIndexOf("/"));
+    await wslExec(`mkdir -p '${dirPath.replace(/'/g, "'\\''")}'`);
+    const content = buildScript(port).replace(/'/g, "'\\''");
+    await wslExec(`printf '%s' '${content}' > '${scriptPath.replace(/'/g, "'\\''")}'`);
+    await wslExec(`chmod 755 '${scriptPath.replace(/'/g, "'\\''")}'`);
+    return;
+  }
+
+  await mkdir(dirname(scriptPath), { recursive: true });
+  await writeFile(scriptPath, buildScript(port), "utf-8");
+  await chmod(scriptPath, 0o755);
 }
 
 type HookEntry = Record<string, unknown>;
@@ -40,7 +60,12 @@ type HookEntry = Record<string, unknown>;
 /** settings.json을 안전하게 읽는다. 파일 없으면 빈 객체 반환. */
 async function readSettings(): Promise<Record<string, unknown>> {
   try {
-    const raw = await readFile(SETTINGS_PATH, "utf-8");
+    if (isWindows) {
+      const settingsPath = getSettingsPath();
+      const raw = await wslExec(`cat '${settingsPath.replace(/'/g, "'\\''")}'`);
+      return JSON.parse(raw) as Record<string, unknown>;
+    }
+    const raw = await readFile(getSettingsPath(), "utf-8");
     return JSON.parse(raw) as Record<string, unknown>;
   } catch {
     return {};
@@ -49,8 +74,20 @@ async function readSettings(): Promise<Record<string, unknown>> {
 
 /** settings.json에 저장한다. 디렉토리가 없으면 생성. */
 async function writeSettings(settings: Record<string, unknown>): Promise<void> {
-  await mkdir(dirname(SETTINGS_PATH), { recursive: true });
-  await writeFile(SETTINGS_PATH, JSON.stringify(settings, null, 2) + "\n", "utf-8");
+  const settingsPath = getSettingsPath();
+  const json = JSON.stringify(settings, null, 2) + "\n";
+
+  if (isWindows) {
+    const dirPath = settingsPath.substring(0, settingsPath.lastIndexOf("/"));
+    await wslExec(`mkdir -p '${dirPath.replace(/'/g, "'\\''")}'`);
+    // base64로 인코딩하여 JSON 내 특수문자 문제 회피
+    const b64 = Buffer.from(json).toString("base64");
+    await wslExec(`echo '${b64}' | base64 -d > '${settingsPath.replace(/'/g, "'\\''")}'`);
+    return;
+  }
+
+  await mkdir(dirname(settingsPath), { recursive: true });
+  await writeFile(settingsPath, json, "utf-8");
 }
 
 /** 커맨드 문자열이 DECK 훅인지 확인 */
@@ -110,7 +147,8 @@ export async function registerHook(port: number): Promise<void> {
   await writeScript(port);
 
   // 모든 이벤트에 훅 등록
-  const hookDef = { hooks: [{ type: "command", command: SCRIPT_PATH }] };
+  const scriptPath = getScriptPath();
+  const hookDef = { hooks: [{ type: "command", command: scriptPath }] };
   for (const event of HOOK_EVENTS) {
     const arr = Array.isArray(hooks[event]) ? (hooks[event] as HookEntry[]) : [];
     arr.push({ ...hookDef });
