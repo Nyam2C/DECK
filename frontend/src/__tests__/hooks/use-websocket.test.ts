@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { useWsState, onServerMessage, sendMessage } from "../../hooks/use-websocket";
+import {
+  useWsState,
+  onServerMessage,
+  sendMessage,
+  disconnectWebSocket,
+} from "../../hooks/use-websocket";
 
 describe("use-websocket", () => {
   describe("useWsState", () => {
@@ -7,17 +12,25 @@ describe("use-websocket", () => {
       const state = useWsState.getState();
       expect(state.connectionState).toBe("disconnected");
     });
+
+    it("wasConnected 초기값은 false", () => {
+      expect(useWsState.getState().wasConnected).toBe(false);
+    });
+
+    it("상태를 수동으로 업데이트할 수 있다", () => {
+      useWsState.setState({ connectionState: "connected", wasConnected: true });
+      expect(useWsState.getState().connectionState).toBe("connected");
+      expect(useWsState.getState().wasConnected).toBe(true);
+      // 원상복구
+      useWsState.setState({ connectionState: "disconnected", wasConnected: false });
+    });
   });
 
   describe("onServerMessage", () => {
     it("핸들러 등록 및 해제", () => {
       const handler = vi.fn();
       const unsubscribe = onServerMessage(handler);
-
-      // 해제 함수 반환 확인
       expect(typeof unsubscribe).toBe("function");
-
-      // 해제 후 핸들러가 호출되지 않아야 함
       unsubscribe();
     });
 
@@ -25,8 +38,15 @@ describe("use-websocket", () => {
       const handler = vi.fn();
       const unsub1 = onServerMessage(handler);
       const unsub2 = onServerMessage(handler);
+      unsub1();
+      unsub2();
+    });
 
-      // Set이므로 같은 함수 참조는 1번만 등록됨
+    it("여러 핸들러를 등록하고 각각 해제할 수 있다", () => {
+      const handler1 = vi.fn();
+      const handler2 = vi.fn();
+      const unsub1 = onServerMessage(handler1);
+      const unsub2 = onServerMessage(handler2);
       unsub1();
       unsub2();
     });
@@ -37,12 +57,31 @@ describe("use-websocket", () => {
       vi.spyOn(console, "warn").mockImplementation(() => {});
     });
 
+    it("WebSocket 미연결 시 false 반환", () => {
+      const result = sendMessage({ type: "input", panelId: "test", data: "hello" });
+      expect(result).toBe(false);
+    });
+
     it("WebSocket 미연결 시 경고 출력", () => {
       sendMessage({ type: "input", panelId: "test", data: "hello" });
       expect(console.warn).toHaveBeenCalledWith(
         expect.stringContaining("미연결"),
         expect.any(String),
       );
+    });
+
+    it("다양한 메시지 타입으로 호출 가능", () => {
+      sendMessage({ type: "kill", panelId: "test" });
+      sendMessage({ type: "resize", panelId: "test", cols: 80, rows: 24 });
+      sendMessage({ type: "create", cli: "claude", path: "/test", options: "" });
+      expect(console.warn).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe("disconnectWebSocket", () => {
+    it("disconnect 후 상태가 disconnected로 변경된다", () => {
+      disconnectWebSocket();
+      expect(useWsState.getState().connectionState).toBe("disconnected");
     });
   });
 });

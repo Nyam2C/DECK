@@ -206,7 +206,10 @@ export function App() {
 
       {/* 다른 탭에서 연결됨 오버레이 */}
       {connectionState === "replaced" && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+          aria-live="polite"
+        >
           <div className="bg-deck-panel border border-deck-pink p-6 text-center space-y-3">
             <div className="text-deck-pink text-sm">다른 탭에서 DECK에 연결되었습니다</div>
             <div className="text-deck-dim text-xs">동시에 하나의 탭만 사용할 수 있습니다</div>
@@ -224,7 +227,10 @@ export function App() {
 
       {/* 연결 끊김 오버레이 — 한 번이라도 연결된 후 끊긴 경우에만 표시 */}
       {wasConnected && connectionState === "disconnected" && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+          aria-live="polite"
+        >
           <div className="bg-deck-panel border border-deck-border p-6 text-center space-y-2">
             <div className="text-deck-pink text-sm">서버 연결이 끊어졌습니다</div>
             <div className="text-deck-dim text-xs">자동 재연결 시도 중...</div>

@@ -152,13 +152,20 @@ describe("createServer", () => {
     const ws = new WebSocket(`ws://127.0.0.1:${PORT}/ws`);
     await waitForOpen(ws);
 
-    const msgPromise = new Promise<string>((resolve) => {
-      ws.on("message", (data) => resolve(data.toString()));
+    // restore-session이 먼저 올 수 있으므로 error 타입까지 대기
+    const errorPromise = new Promise<string>((resolve) => {
+      ws.on("message", function handler(data) {
+        const parsed = JSON.parse(data.toString());
+        if (parsed.type === "error") {
+          ws.off("message", handler);
+          resolve(data.toString());
+        }
+      });
     });
 
     // 잘못된 JSON → 에러 응답
     ws.send("invalid json");
-    const reply = JSON.parse(await msgPromise);
+    const reply = JSON.parse(await errorPromise);
     expect(reply.type).toBe("error");
 
     ws.close();

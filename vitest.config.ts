@@ -17,7 +17,16 @@ export default defineConfig({
         "**/types.ts",
         "**/index.ts",
         "**/*.config.ts",
+        "frontend/src/main.tsx",
+        "frontend/src/vite-env.d.ts",
+        "frontend/src/App.tsx",
       ],
+      thresholds: {
+        statements: 70,
+        branches: 70,
+        functions: 70,
+        lines: 70,
+      },
     },
   },
 });

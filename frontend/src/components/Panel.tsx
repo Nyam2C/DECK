@@ -11,7 +11,7 @@ interface PanelProps {
 }
 
 /** 상태별 보더/글로우 클래스 */
-function getStatusClasses(status: PanelStatus, isFocused: boolean): string {
+export function getStatusClasses(status: PanelStatus, isFocused: boolean): string {
   if (status === "idle") {
     return "border-deck-pink animate-glow-pink";
   }
@@ -25,7 +25,10 @@ function getStatusClasses(status: PanelStatus, isFocused: boolean): string {
 }
 
 /** 상태별 아이콘 */
-function getStatusIcon(status: PanelStatus, isFocused: boolean): { icon: string; color: string } {
+export function getStatusIcon(
+  status: PanelStatus,
+  isFocused: boolean,
+): { icon: string; color: string } {
   if (status === "input") return { icon: "■", color: "text-deck-gold" };
   if (isFocused && status !== "setup" && status !== "exited")
     return { icon: "■", color: "text-deck-cyan" };
@@ -33,7 +36,7 @@ function getStatusIcon(status: PanelStatus, isFocused: boolean): { icon: string;
 }
 
 /** 상태별 상태 텍스트 */
-function getStatusLabel(status: PanelStatus): { text: string; color: string } | null {
+export function getStatusLabel(status: PanelStatus): { text: string; color: string } | null {
   switch (status) {
     case "active":
       return { text: "▪▪▪ active ▪▪▪", color: "text-deck-cyan" };
@@ -79,7 +82,7 @@ function TerminalView({ panelId }: { panelId: string }) {
 }
 
 /** 종료 코드별 설명 메시지 */
-function getExitMessage(exitCode: number | undefined): string {
+export function getExitMessage(exitCode: number | undefined): string {
   switch (exitCode) {
     case 0:
       return "세션이 정상 종료되었습니다";
@@ -302,6 +305,7 @@ export function Panel({ panel, spanClassName }: PanelProps) {
                   : "text-deck-dim border-dashed border-deck-border hover:text-deck-cyan hover:border-deck-cyan/50"
               }`}
               title={isPinned ? "핀 해제" : "핀 고정"}
+              aria-label={isPinned ? "핀 해제" : "핀 고정"}
             >
               PIN
             </button>
@@ -314,6 +318,7 @@ export function Panel({ panel, spanClassName }: PanelProps) {
               }}
               className="text-deck-dim hover:text-deck-pink text-xs transition-colors"
               title="닫기"
+              aria-label="패널 닫기"
             >
               ✕
             </button>
