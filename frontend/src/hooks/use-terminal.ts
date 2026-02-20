@@ -75,8 +75,14 @@ export function useTerminal({ panelId, containerRef }: UseTerminalOptions): void
         return true;
       }
 
-      // Ctrl+V: xterm.js 기본 paste 처리에 위임
-      if (domEvent.ctrlKey && domEvent.key === "v") return true;
+      // Ctrl+V: 클립보드에서 붙여넣기 (preventDefault로 브라우저 paste 이벤트 차단)
+      if (domEvent.ctrlKey && domEvent.key === "v") {
+        domEvent.preventDefault();
+        navigator.clipboard.readText().then((text) => {
+          if (text) sendMessage({ type: "input", panelId, data: text });
+        });
+        return false;
+      }
 
       return true;
     });
