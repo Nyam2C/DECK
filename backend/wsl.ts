@@ -1,4 +1,4 @@
-import { execSync, exec } from "node:child_process";
+import { execFileSync, execFile } from "node:child_process";
 
 export const isWindows = process.platform === "win32";
 
@@ -8,7 +8,9 @@ let _wslHomedir: string | null = null;
 export function getWslHomedir(): string {
   if (_wslHomedir) return _wslHomedir;
   try {
-    _wslHomedir = execSync("wsl.exe -e sh -c 'echo $HOME'", { encoding: "utf-8" }).trim();
+    _wslHomedir = execFileSync("wsl.exe", ["-e", "sh", "-c", "echo $HOME"], {
+      encoding: "utf-8",
+    }).trim();
   } catch {
     _wslHomedir = "/root";
   }
@@ -66,13 +68,9 @@ export function wrapForWsl(
 /** WSL에서 명령을 실행하고 stdout을 반환한다. */
 export function wslExec(command: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    exec(
-      `wsl.exe -e sh -c '${command.replace(/'/g, "'\\''")}'`,
-      { encoding: "utf-8" },
-      (err, stdout) => {
-        if (err) return reject(err);
-        resolve(stdout.trim());
-      },
-    );
+    execFile("wsl.exe", ["-e", "sh", "-c", command], { encoding: "utf-8" }, (err, stdout) => {
+      if (err) return reject(err);
+      resolve(stdout.trim());
+    });
   });
 }
