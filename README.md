@@ -51,9 +51,17 @@ bun run dev
 bun run electron:dev
 ```
 
-### Windows 설치
+### 데스크톱 앱 설치
 
-[GitHub Releases](../../releases)에서 최신 `.exe` 인스톨러를 다운로드하여 실행하면 설치됩니다. 설치 후에는 Bun이나 Node 없이 단독 실행 가능합니다.
+[GitHub Releases](../../releases)에서 OS에 맞는 인스톨러를 다운로드하여 실행하면 설치됩니다.
+
+| OS      | 파일 형식   |
+| ------- | ----------- |
+| Windows | `.exe`      |
+| macOS   | `.dmg`      |
+| Linux   | `.AppImage` |
+
+설치 후에는 Bun이나 Node 없이 단독 실행 가능합니다.
 
 ## 스크립트
 
