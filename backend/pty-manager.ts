@@ -82,7 +82,8 @@ export class PtyManager {
       name: "xterm-256color",
       cols,
       rows,
-      cwd,
+      // Windows: wsl.exe --cd가 WSL cwd를 처리하므로 node-pty cwd 생략
+      ...(process.platform !== "win32" && { cwd }),
       env: { ...process.env, DECK_PANEL_ID: id, CLAUDECODE: "" },
     });
 

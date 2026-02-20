@@ -12,7 +12,7 @@ async function autocompleteViaWsl(partial: string): Promise<string[]> {
 
   const endsWithSlash = partial.endsWith("/") || partial.endsWith("\\");
   // POSIX 경로 처리: dirname/basename을 수동으로
-  const normalized = toWslPath(expanded);
+  const normalized = toWslPath(expanded).replace(/\/+$/, "") || "/";
   const lastSlash = normalized.lastIndexOf("/");
   const parent = endsWithSlash ? normalized : normalized.substring(0, lastSlash) || "/";
   const prefix = endsWithSlash ? "" : normalized.substring(lastSlash + 1);
