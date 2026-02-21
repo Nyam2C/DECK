@@ -156,7 +156,8 @@ describe("usage", () => {
       expect(result).toHaveProperty("limits");
     });
 
-    it("JSONL 파일을 읽어 집계한다", async () => {
+    // Windows CI에는 WSL이 없어 readTodayJsonlFiles가 WSL 경로로 실패
+    it.skipIf(process.platform === "win32")("JSONL 파일을 읽어 집계한다", async () => {
       const jsonl = [
         JSON.stringify({
           type: "assistant",
