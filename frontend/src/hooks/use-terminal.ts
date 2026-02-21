@@ -57,10 +57,21 @@ export function useTerminal({ panelId, containerRef }: UseTerminalOptions): void
     terminal.loadAddon(fitAddon);
     terminal.open(container);
 
+    // IME 조합 중 Enter가 삼켜지는 문제 대응: compositionend 후 Enter 수동 전송
+    let imeEnterPending = false;
+
     // 키 이벤트 가로채기
     terminal.attachCustomKeyEventHandler((domEvent) => {
       // IME 조합 중이면 xterm.js 기본 처리를 막고 브라우저에 위임
-      if (domEvent.isComposing || domEvent.key === "Process") return false;
+      if (domEvent.isComposing || domEvent.key === "Process") {
+        if (
+          domEvent.type === "keydown" &&
+          (domEvent.code === "Enter" || domEvent.code === "NumpadEnter")
+        ) {
+          imeEnterPending = true;
+        }
+        return false;
+      }
 
       // Leader Key
       if (isLeaderKey(domEvent, useSettingsStore.getState().leaderKey)) return false;
@@ -121,6 +132,21 @@ export function useTerminal({ panelId, containerRef }: UseTerminalOptions): void
       }
     });
 
+    // IME 조합 중 Enter 처리: compositionend 후 버퍼 flush + Enter 전송
+    const textarea = terminal.textarea;
+    const onCompositionEnd = () => {
+      if (imeEnterPending) {
+        imeEnterPending = false;
+        if (inputTimer) {
+          clearTimeout(inputTimer);
+          inputTimer = null;
+        }
+        flushInput();
+        sendMessage({ type: "input", panelId, data: "\r" });
+      }
+    };
+    textarea?.addEventListener("compositionend", onCompositionEnd);
+
     // 5. 서버 메시지 구독 → 터미널 출력
     const unsubscribe = onServerMessage((msg) => {
       if (msg.type === "output" && msg.panelId === panelId) {
@@ -144,6 +170,7 @@ export function useTerminal({ panelId, containerRef }: UseTerminalOptions): void
 
     // 7. 정리
     return () => {
+      textarea?.removeEventListener("compositionend", onCompositionEnd);
       resizeObserver.disconnect();
       if (rafId !== null) cancelAnimationFrame(rafId);
       if (inputTimer) {
