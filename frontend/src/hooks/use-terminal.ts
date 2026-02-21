@@ -147,6 +147,23 @@ export function useTerminal({ panelId, containerRef }: UseTerminalOptions): void
     };
     textarea?.addEventListener("compositionend", onCompositionEnd);
 
+    // 파일 드래그 앤 드롭 → 경로 붙여넣기
+    const onDragOver = (e: DragEvent) => e.preventDefault();
+    const onDrop = (e: DragEvent) => {
+      e.preventDefault();
+      const files = e.dataTransfer?.files;
+      if (!files?.length) return;
+      const paths = Array.from(files)
+        .map((f) => {
+          const p = (f as File & { path: string }).path;
+          return p.includes(" ") ? `"${p}"` : p;
+        })
+        .join(" ");
+      sendMessage({ type: "input", panelId, data: paths });
+    };
+    container.addEventListener("dragover", onDragOver);
+    container.addEventListener("drop", onDrop);
+
     // 5. 서버 메시지 구독 → 터미널 출력
     const unsubscribe = onServerMessage((msg) => {
       if (msg.type === "output" && msg.panelId === panelId) {
@@ -171,6 +188,8 @@ export function useTerminal({ panelId, containerRef }: UseTerminalOptions): void
     // 7. 정리
     return () => {
       textarea?.removeEventListener("compositionend", onCompositionEnd);
+      container.removeEventListener("dragover", onDragOver);
+      container.removeEventListener("drop", onDrop);
       resizeObserver.disconnect();
       if (rafId !== null) cancelAnimationFrame(rafId);
       if (inputTimer) {
