@@ -7,7 +7,7 @@ const SCROLLBACK_LIMIT = 100_000; // 세션당 ~100KB
 export type OnDataCallback = (id: string, data: string) => void;
 export type OnExitCallback = (id: string, exitCode: number) => void;
 
-const BATCH_INTERVAL = 16; // ~60fps
+const BATCH_INTERVAL = 4; // 한글 IME 에코 지연 최소화
 
 export class PtyManager {
   private sessions = new Map<string, PtySession>();

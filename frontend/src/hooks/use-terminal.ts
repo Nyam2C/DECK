@@ -104,7 +104,7 @@ export function useTerminal({ panelId, containerRef }: UseTerminalOptions): void
     // 4. 키 입력 → WebSocket (배치 버퍼: 짧은 간격 내 연속 입력을 하나로 묶어 전송)
     let inputBuf = "";
     let inputTimer: ReturnType<typeof setTimeout> | null = null;
-    const INPUT_BATCH_MS = 6;
+    const INPUT_BATCH_MS = 0;
 
     const flushInput = () => {
       if (inputBuf) {
