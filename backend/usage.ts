@@ -1,4 +1,4 @@
-import { readdir, readFile, stat } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { isWindows, getWslHomedir, wslExec } from "./wsl";
@@ -191,16 +191,6 @@ function todayStr(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function isModifiedToday(mtimeMs: number): boolean {
-  const today = new Date();
-  const mtime = new Date(mtimeMs);
-  return (
-    mtime.getFullYear() === today.getFullYear() &&
-    mtime.getMonth() === today.getMonth() &&
-    mtime.getDate() === today.getDate()
-  );
-}
-
 interface ParsedEntry {
   requestId: string;
   model: string;
@@ -321,8 +311,6 @@ async function readTodayJsonlFiles(projectDir: string, today: string): Promise<P
       if (!file.endsWith(".jsonl")) continue;
       const fullPath = join(projectDir, file);
       try {
-        const s = await stat(fullPath);
-        if (!isModifiedToday(s.mtimeMs)) continue;
         const content = await readFile(fullPath, "utf-8");
         entries.push(...parseJsonlContent(content, today));
       } catch {
