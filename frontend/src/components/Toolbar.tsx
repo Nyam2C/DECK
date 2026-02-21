@@ -315,9 +315,7 @@ export function Toolbar() {
           {usageOpen && usage && (
             <div className="absolute right-0 top-full mt-1 bg-deck-panel border border-deck-border p-4 z-50 min-w-[220px] font-term text-sm">
               {!usage.limits && usage.totalInputTokens === 0 ? (
-                <div className="text-deck-dim text-xs text-center py-2">
-                  Claude Code 미감지
-                </div>
+                <div className="text-deck-dim text-xs text-center py-2">Claude Code 미감지</div>
               ) : usage.limits ? (
                 <>
                   <div className="text-deck-text font-bold mb-2">{usage.limits.plan}</div>
@@ -327,11 +325,15 @@ export function Toolbar() {
                   <div className="mb-3">
                     <div className="flex justify-between text-xs mb-1">
                       <span className="text-deck-dim">세션 (5h)</span>
-                      <span className="text-deck-text">{Math.round(usage.limits.fiveHour.utilization)}%</span>
+                      <span className="text-deck-text">
+                        {Math.round(usage.limits.fiveHour.utilization)}%
+                      </span>
                     </div>
                     <GaugeBar utilization={usage.limits.fiveHour.utilization} />
                     {usage.limits.fiveHour.resetsAt && (
-                      <div className="text-[10px] text-deck-dim mt-0.5">리셋: {formatResetTime(usage.limits.fiveHour.resetsAt)}</div>
+                      <div className="text-[10px] text-deck-dim mt-0.5">
+                        리셋: {formatResetTime(usage.limits.fiveHour.resetsAt)}
+                      </div>
                     )}
                   </div>
 
@@ -339,11 +341,15 @@ export function Toolbar() {
                   <div className="mb-3">
                     <div className="flex justify-between text-xs mb-1">
                       <span className="text-deck-dim">주간 (7d)</span>
-                      <span className="text-deck-text">{Math.round(usage.limits.sevenDay.utilization)}%</span>
+                      <span className="text-deck-text">
+                        {Math.round(usage.limits.sevenDay.utilization)}%
+                      </span>
                     </div>
                     <GaugeBar utilization={usage.limits.sevenDay.utilization} />
                     {usage.limits.sevenDay.resetsAt && (
-                      <div className="text-[10px] text-deck-dim mt-0.5">리셋: {formatResetTime(usage.limits.sevenDay.resetsAt)}</div>
+                      <div className="text-[10px] text-deck-dim mt-0.5">
+                        리셋: {formatResetTime(usage.limits.sevenDay.resetsAt)}
+                      </div>
                     )}
                   </div>
 
@@ -352,7 +358,9 @@ export function Toolbar() {
                     <div className="mb-3">
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-deck-dim">Opus (7d)</span>
-                        <span className="text-deck-text">{Math.round(usage.limits.sevenDayOpus.utilization)}%</span>
+                        <span className="text-deck-text">
+                          {Math.round(usage.limits.sevenDayOpus.utilization)}%
+                        </span>
                       </div>
                       <GaugeBar utilization={usage.limits.sevenDayOpus.utilization} />
                     </div>
@@ -363,7 +371,9 @@ export function Toolbar() {
                     <div className="mb-3">
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-deck-dim">Sonnet (7d)</span>
-                        <span className="text-deck-text">{Math.round(usage.limits.sevenDaySonnet.utilization)}%</span>
+                        <span className="text-deck-text">
+                          {Math.round(usage.limits.sevenDaySonnet.utilization)}%
+                        </span>
                       </div>
                       <GaugeBar utilization={usage.limits.sevenDaySonnet.utilization} />
                     </div>
@@ -382,7 +392,9 @@ export function Toolbar() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-deck-dim">Output</span>
-                      <span className="text-deck-text">{formatTokens(usage.totalOutputTokens)}</span>
+                      <span className="text-deck-text">
+                        {formatTokens(usage.totalOutputTokens)}
+                      </span>
                     </div>
                   </div>
                 </>
@@ -402,7 +414,9 @@ export function Toolbar() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-deck-dim">Output</span>
-                      <span className="text-deck-text">{formatTokens(usage.totalOutputTokens)}</span>
+                      <span className="text-deck-text">
+                        {formatTokens(usage.totalOutputTokens)}
+                      </span>
                     </div>
                   </div>
                   {Object.keys(usage.byModel).length > 0 && (
