@@ -17,6 +17,7 @@ import {
   loadSession,
   saveSession,
 } from "./session-manager";
+import { getTodayUsage } from "./usage";
 
 export interface DeckServerOptions {
   port: number;
@@ -110,6 +111,12 @@ export function createServer(options: DeckServerOptions) {
       const session = await loadSession();
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(session));
+      return;
+    }
+    if (url.pathname === "/api/usage" && req.method === "GET") {
+      const usage = await getTodayUsage();
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(usage));
       return;
     }
 

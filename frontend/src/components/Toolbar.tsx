@@ -6,6 +6,68 @@ import { formatElapsed } from "../services/stopwatch";
 const MAX_PANELS = 4;
 const STORAGE_KEY = "deck-stopwatch";
 
+interface UsageLimits {
+  plan: string;
+  fiveHour: { utilization: number; resetsAt: string };
+  sevenDay: { utilization: number; resetsAt: string };
+  sevenDayOpus?: { utilization: number; resetsAt: string } | null;
+  sevenDaySonnet?: { utilization: number; resetsAt: string } | null;
+}
+
+interface UsageSummary {
+  date: string;
+  totalCostUSD: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCacheCreateTokens: number;
+  totalCacheReadTokens: number;
+  byModel: Record<string, { costUSD: number; inputTokens: number; outputTokens: number }>;
+  limits: UsageLimits | null;
+}
+
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
+function formatResetTime(resetsAt: string): string {
+  if (!resetsAt) return "";
+  const diff = new Date(resetsAt).getTime() - Date.now();
+  if (diff <= 0) return "soon";
+  const hours = Math.floor(diff / 3_600_000);
+  const minutes = Math.floor((diff % 3_600_000) / 60_000);
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    const remH = hours % 24;
+    return `${days}d ${remH}h`;
+  }
+  return `${hours}h ${minutes}m`;
+}
+
+function utilizationColor(util: number): string {
+  if (util >= 80) return "bg-deck-pink";
+  if (util >= 50) return "bg-yellow-400";
+  return "bg-deck-cyan";
+}
+
+function utilizationBorderColor(util: number): string {
+  if (util >= 80) return "border-deck-pink text-deck-pink";
+  if (util >= 50) return "border-yellow-400 text-yellow-400";
+  return "border-deck-cyan text-deck-cyan";
+}
+
+function GaugeBar({ utilization }: { utilization: number }) {
+  return (
+    <div className="w-full h-2 bg-deck-border rounded-sm overflow-hidden">
+      <div
+        className={`h-full ${utilizationColor(utilization)} transition-all`}
+        style={{ width: `${Math.min(utilization, 100)}%` }}
+      />
+    </div>
+  );
+}
+
 interface StopwatchState {
   elapsed: number;
   running: boolean;
@@ -103,6 +165,40 @@ export function Toolbar() {
     saveStopwatch({ elapsed: 0, running: false, lastTick: 0 });
   }, []);
 
+  // 사용량 상태
+  const [usageOpen, setUsageOpen] = useState(false);
+  const [usage, setUsage] = useState<UsageSummary | null>(null);
+  const usageRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchUsage() {
+      try {
+        const res = await fetch("/api/usage");
+        if (!cancelled && res.ok) setUsage(await res.json());
+      } catch {
+        // 무시
+      }
+    }
+    fetchUsage();
+    const interval = setInterval(fetchUsage, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!usageOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (usageRef.current && !usageRef.current.contains(e.target as Node)) {
+        setUsageOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [usageOpen]);
+
   return (
     <header className="flex items-center justify-between px-5 py-1.5 min-h-[52px] bg-deck-panel/80 backdrop-blur-sm border-b border-dotted border-deck-border relative z-40 shrink-0 [-webkit-app-region:drag]">
       {/* 좌측: 로고 */}
@@ -188,6 +284,122 @@ export function Toolbar() {
                   ↺ 리셋
                 </button>
               </div>
+            </div>
+          )}
+        </div>
+        <div className="relative" ref={usageRef}>
+          {(() => {
+            const limits = usage?.limits;
+            const maxUtil = limits
+              ? Math.max(limits.fiveHour.utilization, limits.sevenDay.utilization)
+              : 0;
+            const btnColor = limits
+              ? utilizationBorderColor(maxUtil)
+              : "border-deck-cyan text-deck-cyan";
+            const btnText = "⦿";
+
+            return (
+              <button
+                onClick={() => setUsageOpen(!usageOpen)}
+                className={`border border-dashed ${btnColor} px-3 py-1 text-sm hover:shadow-[0_0_12px_#39C5BB] transition-shadow cursor-pointer`}
+                title="Claude 사용량"
+                aria-label="Claude 사용량"
+              >
+                {btnText}
+              </button>
+            );
+          })()}
+          {usageOpen && usage && (
+            <div className="absolute right-0 top-full mt-1 bg-deck-panel border border-deck-border p-4 z-50 min-w-[220px] font-term text-sm">
+              {usage.limits ? (
+                <>
+                  <div className="text-deck-text font-bold mb-2">{usage.limits.plan}</div>
+                  <div className="border-t border-deck-border my-2" />
+
+                  {/* 5시간 세션 */}
+                  <div className="mb-3">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-deck-dim">세션 (5h)</span>
+                      <span className="text-deck-text">{Math.round(usage.limits.fiveHour.utilization)}%</span>
+                    </div>
+                    <GaugeBar utilization={usage.limits.fiveHour.utilization} />
+                    {usage.limits.fiveHour.resetsAt && (
+                      <div className="text-[10px] text-deck-dim mt-0.5">리셋: {formatResetTime(usage.limits.fiveHour.resetsAt)}</div>
+                    )}
+                  </div>
+
+                  {/* 7일 주간 */}
+                  <div className="mb-3">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-deck-dim">주간 (7d)</span>
+                      <span className="text-deck-text">{Math.round(usage.limits.sevenDay.utilization)}%</span>
+                    </div>
+                    <GaugeBar utilization={usage.limits.sevenDay.utilization} />
+                    {usage.limits.sevenDay.resetsAt && (
+                      <div className="text-[10px] text-deck-dim mt-0.5">리셋: {formatResetTime(usage.limits.sevenDay.resetsAt)}</div>
+                    )}
+                  </div>
+
+                  {/* Opus (7d) — 있을 때만 */}
+                  {usage.limits.sevenDayOpus && (
+                    <div className="mb-3">
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-deck-dim">Opus (7d)</span>
+                        <span className="text-deck-text">{Math.round(usage.limits.sevenDayOpus.utilization)}%</span>
+                      </div>
+                      <GaugeBar utilization={usage.limits.sevenDayOpus.utilization} />
+                    </div>
+                  )}
+
+                  {/* Sonnet (7d) — 있을 때만 */}
+                  {usage.limits.sevenDaySonnet && (
+                    <div className="mb-3">
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-deck-dim">Sonnet (7d)</span>
+                        <span className="text-deck-text">{Math.round(usage.limits.sevenDaySonnet.utilization)}%</span>
+                      </div>
+                      <GaugeBar utilization={usage.limits.sevenDaySonnet.utilization} />
+                    </div>
+                  )}
+
+                  <div className="border-t border-deck-border my-2" />
+                </>
+              ) : (
+                <>
+                  <div className="text-deck-dim mb-2">오늘의 사용량</div>
+                  <div className="border-t border-deck-border my-2" />
+                </>
+              )}
+
+              {/* 비용 섹션 (항상 표시) */}
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-deck-dim">오늘 비용</span>
+                  <span className="text-deck-cyan">${usage.totalCostUSD.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-deck-dim">Input</span>
+                  <span className="text-deck-text">{formatTokens(usage.totalInputTokens)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-deck-dim">Output</span>
+                  <span className="text-deck-text">{formatTokens(usage.totalOutputTokens)}</span>
+                </div>
+              </div>
+              {Object.keys(usage.byModel).length > 0 && (
+                <>
+                  <div className="border-t border-deck-border my-2" />
+                  <div className="text-deck-dim mb-1 text-xs">모델별</div>
+                  <div className="space-y-1 text-xs">
+                    {Object.entries(usage.byModel).map(([model, data]) => (
+                      <div key={model} className="flex justify-between">
+                        <span className="text-deck-text">{model}</span>
+                        <span className="text-deck-cyan">${data.costUSD.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
