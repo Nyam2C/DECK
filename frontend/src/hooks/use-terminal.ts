@@ -59,6 +59,9 @@ export function useTerminal({ panelId, containerRef }: UseTerminalOptions): void
 
     // 키 이벤트 가로채기
     terminal.attachCustomKeyEventHandler((domEvent) => {
+      // IME 조합 중이면 xterm.js 기본 처리를 막고 브라우저에 위임
+      if (domEvent.isComposing || domEvent.key === "Process") return false;
+
       // Leader Key
       if (isLeaderKey(domEvent, useSettingsStore.getState().leaderKey)) return false;
 
