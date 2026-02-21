@@ -223,19 +223,15 @@ describe("usage", () => {
     });
 
     it("credentials 없으면 null 반환", async () => {
-      // readCredentials가 null을 반환하면 API 호출 안 함
-      vi.spyOn(await import("../usage"), "readCredentials").mockResolvedValue(null);
-      const result = await fetchOAuthUsage();
+      const result = await fetchOAuthUsage(async () => null);
       expect(result).toBeNull();
     });
 
     it("API 응답을 UsageLimits로 변환", async () => {
-      const mod = await import("../usage");
-      vi.spyOn(mod, "readCredentials").mockResolvedValue({
+      const mockCreds = async () => ({
         accessToken: "sk-ant-oat-test",
         rateLimitTier: "default_claude_pro",
       });
-
       const mockResponse = {
         ok: true,
         json: async () => ({
@@ -246,7 +242,7 @@ describe("usage", () => {
       };
       vi.spyOn(globalThis, "fetch").mockResolvedValue(mockResponse as Response);
 
-      const result = await mod.fetchOAuthUsage();
+      const result = await fetchOAuthUsage(mockCreds);
       expect(result).not.toBeNull();
       expect(result!.plan).toBe("Pro");
       expect(result!.fiveHour.utilization).toBe(42);
@@ -256,26 +252,24 @@ describe("usage", () => {
     });
 
     it("API 401 에러 시 null 반환", async () => {
-      const mod = await import("../usage");
-      vi.spyOn(mod, "readCredentials").mockResolvedValue({
+      const mockCreds = async () => ({
         accessToken: "sk-ant-oat-expired",
         rateLimitTier: "default_claude_pro",
       });
       vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: false, status: 401 } as Response);
 
-      const result = await mod.fetchOAuthUsage();
+      const result = await fetchOAuthUsage(mockCreds);
       expect(result).toBeNull();
     });
 
     it("네트워크 에러 시 null 반환", async () => {
-      const mod = await import("../usage");
-      vi.spyOn(mod, "readCredentials").mockResolvedValue({
+      const mockCreds = async () => ({
         accessToken: "sk-ant-oat-test",
         rateLimitTier: "default_claude_pro",
       });
       vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("ECONNREFUSED"));
 
-      const result = await mod.fetchOAuthUsage();
+      const result = await fetchOAuthUsage(mockCreds);
       expect(result).toBeNull();
     });
   });

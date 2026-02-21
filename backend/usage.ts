@@ -131,13 +131,15 @@ export async function readCredentials(): Promise<OAuthCredentials | null> {
 // 인메모리 캐시: 60초 TTL
 let limitsCache: { data: UsageLimits; expiresAt: number } | null = null;
 
-export async function fetchOAuthUsage(): Promise<UsageLimits | null> {
+export async function fetchOAuthUsage(
+  getCreds: () => Promise<OAuthCredentials | null> = readCredentials,
+): Promise<UsageLimits | null> {
   // 캐시 유효하면 반환
   if (limitsCache && Date.now() < limitsCache.expiresAt) {
     return limitsCache.data;
   }
 
-  const creds = await readCredentials();
+  const creds = await getCreds();
   if (!creds) return null;
 
   try {
@@ -161,10 +163,16 @@ export async function fetchOAuthUsage(): Promise<UsageLimits | null> {
         resetsAt: body.seven_day?.resets_at ?? "",
       },
       sevenDayOpus: body.seven_day_opus
-        ? { utilization: body.seven_day_opus.utilization ?? 0, resetsAt: body.seven_day_opus.resets_at ?? "" }
+        ? {
+            utilization: body.seven_day_opus.utilization ?? 0,
+            resetsAt: body.seven_day_opus.resets_at ?? "",
+          }
         : null,
       sevenDaySonnet: body.seven_day_sonnet
-        ? { utilization: body.seven_day_sonnet.utilization ?? 0, resetsAt: body.seven_day_sonnet.resets_at ?? "" }
+        ? {
+            utilization: body.seven_day_sonnet.utilization ?? 0,
+            resetsAt: body.seven_day_sonnet.resets_at ?? "",
+          }
         : null,
     };
 
@@ -246,10 +254,7 @@ async function findClaudeProjectDirs(): Promise<string[]> {
   if (isWindows) {
     try {
       const wslHome = getWslHomedir();
-      const candidates = [
-        `${wslHome}/.claude/projects`,
-        `${wslHome}/.config/claude/projects`,
-      ];
+      const candidates = [`${wslHome}/.claude/projects`, `${wslHome}/.config/claude/projects`];
       for (const base of candidates) {
         try {
           const output = await wslExec(`ls '${base.replace(/'/g, "'\\''")}'`);
@@ -292,7 +297,9 @@ async function readTodayJsonlFiles(projectDir: string, today: string): Promise<P
     // WSL: stat + cat via wslExec
     try {
       const q = (s: string) => `'${s.replace(/'/g, "'\\''")}'`;
-      const listing = await wslExec(`find ${q(projectDir)} -name '*.jsonl' -newermt '${today}' 2>/dev/null`);
+      const listing = await wslExec(
+        `find ${q(projectDir)} -name '*.jsonl' -newermt '${today}' 2>/dev/null`,
+      );
       const files = listing.split("\n").filter((f) => f.trim());
       for (const file of files) {
         try {
