@@ -293,9 +293,12 @@ export function Toolbar() {
             const maxUtil = limits
               ? Math.max(limits.fiveHour.utilization, limits.sevenDay.utilization)
               : 0;
-            const btnColor = limits
-              ? utilizationBorderColor(maxUtil)
-              : "border-deck-cyan text-deck-cyan";
+            const noData = usage && !limits && usage.totalInputTokens === 0;
+            const btnColor = noData
+              ? "border-deck-border text-deck-dim"
+              : limits
+                ? utilizationBorderColor(maxUtil)
+                : "border-deck-cyan text-deck-cyan";
             const btnText = "⦿";
 
             return (
@@ -311,7 +314,11 @@ export function Toolbar() {
           })()}
           {usageOpen && usage && (
             <div className="absolute right-0 top-full mt-1 bg-deck-panel border border-deck-border p-4 z-50 min-w-[220px] font-term text-sm">
-              {usage.limits ? (
+              {!usage.limits && usage.totalInputTokens === 0 ? (
+                <div className="text-deck-dim text-xs text-center py-2">
+                  Claude Code 미감지
+                </div>
+              ) : usage.limits ? (
                 <>
                   <div className="text-deck-text font-bold mb-2">{usage.limits.plan}</div>
                   <div className="border-t border-deck-border my-2" />
@@ -363,41 +370,55 @@ export function Toolbar() {
                   )}
 
                   <div className="border-t border-deck-border my-2" />
+                  {/* 비용 섹션 */}
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-deck-dim">오늘 비용</span>
+                      <span className="text-deck-cyan">${usage.totalCostUSD.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-deck-dim">Input</span>
+                      <span className="text-deck-text">{formatTokens(usage.totalInputTokens)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-deck-dim">Output</span>
+                      <span className="text-deck-text">{formatTokens(usage.totalOutputTokens)}</span>
+                    </div>
+                  </div>
                 </>
               ) : (
                 <>
                   <div className="text-deck-dim mb-2">오늘의 사용량</div>
                   <div className="border-t border-deck-border my-2" />
-                </>
-              )}
-
-              {/* 비용 섹션 (항상 표시) */}
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-deck-dim">오늘 비용</span>
-                  <span className="text-deck-cyan">${usage.totalCostUSD.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-deck-dim">Input</span>
-                  <span className="text-deck-text">{formatTokens(usage.totalInputTokens)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-deck-dim">Output</span>
-                  <span className="text-deck-text">{formatTokens(usage.totalOutputTokens)}</span>
-                </div>
-              </div>
-              {Object.keys(usage.byModel).length > 0 && (
-                <>
-                  <div className="border-t border-deck-border my-2" />
-                  <div className="text-deck-dim mb-1 text-xs">모델별</div>
+                  {/* 비용 섹션 */}
                   <div className="space-y-1 text-xs">
-                    {Object.entries(usage.byModel).map(([model, data]) => (
-                      <div key={model} className="flex justify-between">
-                        <span className="text-deck-text">{model}</span>
-                        <span className="text-deck-cyan">${data.costUSD.toFixed(2)}</span>
-                      </div>
-                    ))}
+                    <div className="flex justify-between">
+                      <span className="text-deck-dim">오늘 비용</span>
+                      <span className="text-deck-cyan">${usage.totalCostUSD.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-deck-dim">Input</span>
+                      <span className="text-deck-text">{formatTokens(usage.totalInputTokens)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-deck-dim">Output</span>
+                      <span className="text-deck-text">{formatTokens(usage.totalOutputTokens)}</span>
+                    </div>
                   </div>
+                  {Object.keys(usage.byModel).length > 0 && (
+                    <>
+                      <div className="border-t border-deck-border my-2" />
+                      <div className="text-deck-dim mb-1 text-xs">모델별</div>
+                      <div className="space-y-1 text-xs">
+                        {Object.entries(usage.byModel).map(([model, data]) => (
+                          <div key={model} className="flex justify-between">
+                            <span className="text-deck-text">{model}</span>
+                            <span className="text-deck-cyan">${data.costUSD.toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </div>
