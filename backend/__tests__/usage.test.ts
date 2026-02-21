@@ -10,6 +10,7 @@ import {
   parsePlanName,
   fetchOAuthUsage,
   clearLimitsCache,
+  todayStr,
 } from "../usage";
 
 describe("usage", () => {
@@ -60,8 +61,7 @@ describe("usage", () => {
   // ─── parseJsonlContent ───
 
   describe("parseJsonlContent", () => {
-    const d = new Date();
-    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const today = todayStr();
 
     it("assistant 메시지에서 usage를 추출한다", () => {
       const line = JSON.stringify({
@@ -132,8 +132,7 @@ describe("usage", () => {
 
   describe("createUsageReader", () => {
     let dir: string;
-    const d = new Date();
-    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const today = todayStr();
 
     beforeEach(async () => {
       dir = await mkdtemp(join(tmpdir(), "deck-usage-test-"));
