@@ -283,8 +283,8 @@ async function findClaudeProjectDirs(): Promise<string[]> {
 async function readTodayJsonlFiles(projectDir: string, today: string): Promise<ParsedEntry[]> {
   const entries: ParsedEntry[] = [];
 
-  if (isWindows) {
-    // WSL: stat + cat via wslExec
+  if (isWindows && projectDir.startsWith("/")) {
+    // WSL 경로일 때만 wslExec 사용
     try {
       const q = (s: string) => `'${s.replace(/'/g, "'\\''")}'`;
       const listing = await wslExec(
